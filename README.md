@@ -2,7 +2,7 @@
 
 This is a ros package for AT_JMOAB01 development shield on Jetson Nano/Xavier and Raspberry Pi for motor and I/O control.
 
-![](images/nono.jpg)
+![](images/nano.jpg)
 
 ## Install
 
