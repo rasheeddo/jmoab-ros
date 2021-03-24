@@ -54,10 +54,11 @@ class JMOAB:
 		return SBUS_ch
 
 	def cmd_callback(self, msg):
-		self.cmd_steering = msg.data[0]
-		self.cmd_throttle = msg.data[1]
+		if len(msg.data) > 0:
+			self.cmd_steering = msg.data[0]
+			self.cmd_throttle = msg.data[1]
 
-		self.send_steering_throttle(self.cmd_steering, self.cmd_throttle)
+			self.send_steering_throttle(self.cmd_steering, self.cmd_throttle)
 
 	def loop(self):
 
