@@ -3,12 +3,12 @@ import rospy
 from smbus2 import SMBus
 from std_msgs.msg import Int32MultiArray
 
-class JMOAB:
+class JMOAB_ATCart:
 
 	def __init__(self):
 
-		rospy.init_node('jmoab_ros_node', anonymous=True)
-		rospy.loginfo("Start JMOAB-ROS node")
+		rospy.init_node('jmoab_ros_atcart_node', anonymous=True)
+		rospy.loginfo("Start JMOAB-ROS-ATCart node")
 
 		self.bus = SMBus(1)
 
@@ -74,4 +74,4 @@ class JMOAB:
 
 
 if __name__ == '__main__':
-	jmoab = JMOAB()
+	jmoab = JMOAB_ATCart()

@@ -26,6 +26,10 @@ Source environment
 - `source ~/.bashrc`
 - `source ~/catkin/devel/setup.bash`
 
+## JMOAB with all nodes
+
+`roslaunch jmoab-ros jmoab-ros.alunch` will run all the nodes that have implemented.
+
 ## JMOAB with ATCart Wheels
 
 ![](images/jmoab-wiring1.jpg)
@@ -37,7 +41,7 @@ The board has an interface to send a command to control ATCart wheel system, it 
 
 ### Run
 
-Run the jmoab-ros node
+To run the jmoab_ros_atcart_node
 - `rosrun jmoab-ros jmoab-ros-atcart.py`, 
 
 List out topics
@@ -50,7 +54,22 @@ Check more detail on example scripts
 
 ## JMOAB with BNO055 9axis IMU 
 
-...In development process
+![](images/default-imu-orientation.jpg)
+
+The default orientation of BNO055 on JMOAB is shown above. As default setup, we will have quaternion data in Fusion mode of IMU. In this mode we will get the data as relative from it firstly started.
+
+### Run 
+To run the jmoab_ros_imu_node
+- `rosrun jmoab-ros jmoab-ros-imu.py`
+
+List out topics
+- `rostopic list`, you would see there is a topic `jmoab_imu_raw` which is geometry sensor message as quaternion.
+
+So if you place the Jetson upside down (heatsink is pointing down), so there is no need to do dot product of rotation matrix. You can use that quaternion directly, but if your Jetson is placed regularly (heatsink is point up), then you will need to do dot product of rotation matrix. Please check the detail on example directory `imu_listener.py`
+
+We can visualize the imu topic by using rviz_imu_plugin (install from here http://wiki.ros.org/rviz_imu_plugin). Then we could run rviz with the config file [here](rviz/jmoab-imu-test.rviz).
+
+
 
 ## JMOAB with BME680 sensor
 

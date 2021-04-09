@@ -1,0 +1,7 @@
+<launch>
+
+	<node pkg="jmoab-ros" name="jmoab_ros_atcart_node" type="jmoab-ros-atcart.py" output="screen"/>
+
+	<node pkg="jmoab-ros" name="jmoab_ros_imu_node" type="jmoab-ros-imu.py" output="screen"/>
+
+</launch>
