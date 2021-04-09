@@ -59,7 +59,7 @@ class JMOAB_IMU:
 			# print("{:.3f}  {:.3f}  {:.3f}  {:.3f}".format(qw,qx,qy,qz))
 
 			self.imu_msg.header.stamp = rospy.Time.now()
-			self.imu_msg.header.frame_id = 'jmoab_raw_imu_frame'
+			self.imu_msg.header.frame_id = 'base_link'
 			self.imu_msg.orientation.x = qx #roll
 			self.imu_msg.orientation.y = qy #pitch
 			self.imu_msg.orientation.z = qz #yaw
