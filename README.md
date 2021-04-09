@@ -23,7 +23,7 @@ Build a package
 - `catkin_make`
 
 Source environment
-- `source ~/.bashrc`
+- `source ~/.bashrc` 
 - `source ~/catkin/devel/setup.bash`
 
 ## JMOAB with all nodes
@@ -65,9 +65,9 @@ To run the jmoab_ros_imu_node
 List out topics
 - `rostopic list`, you would see there is a topic `jmoab_imu_raw` which is geometry sensor message as quaternion.
 
-So if you place the Jetson upside down (heatsink is pointing down), so there is no need to do dot product of rotation matrix. You can use that quaternion directly, but if your Jetson is placed regularly (heatsink is point up), then you will need to do dot product of rotation matrix. Please check the detail on example directory `imu_listener.py`
+So if you place the Jetson upside down (heatsink is pointing down), so there is no need to do dot product of rotation matrix. You can use that quaternion directly, but if your Jetson is placed regularly (heatsink is point up), then you will need to do dot product of rotation matrix. Please check the detail on example directory `imu_listener.py` for how to use convert quaternion to Euluer angle (roll-pitch-yaw), and `imu_repeater.py` to repeat the raw value and republish with some rotation matrix.
 
-We can visualize the imu topic by using rviz_imu_plugin (install from here http://wiki.ros.org/rviz_imu_plugin). Then we could run rviz with the config file [here](rviz/jmoab-imu-test.rviz).
+We can visualize the imu topic by using rviz_imu_plugin (install from here http://wiki.ros.org/rviz_imu_plugin). Then we could run rviz with the config file [here](rviz/jmoab-imu-test.rviz) and [here](rviz/jmoab-imu-repeater.rviz).
 
 
 
