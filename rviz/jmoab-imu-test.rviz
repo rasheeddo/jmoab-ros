@@ -4,6 +4,7 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
+        - /Global Options1
         - /Imu2/Box properties1
       Splitter Ratio: 0.5
     Tree Height: 659
@@ -85,7 +86,7 @@ Visualization Manager:
   Global Options:
     Background Color: 48; 48; 48
     Default Light: true
-    Fixed Frame: jmoab_raw_imu_frame
+    Fixed Frame: base_link
     Frame Rate: 30
   Name: root
   Tools:
