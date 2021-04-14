@@ -2,6 +2,7 @@
 import rospy
 from smbus2 import SMBus
 from std_msgs.msg import Int32MultiArray
+import time
 
 class JMOAB_ATCart:
 
@@ -16,8 +17,16 @@ class JMOAB_ATCart:
 		self.sbus_ch = Int32MultiArray()
 
 		rospy.Subscriber("/sbus_cmd", Int32MultiArray, self.cmd_callback)
-		self.cmd_steering = 1024
-		self.cmd_throttle = 1024
+
+		self.sbus_steering_mid = 1024
+		self.sbus_throttle_mid = 1024
+
+		self.cmd_steering = self.sbus_steering_mid
+		self.cmd_throttle = self.sbus_throttle_mid
+
+		self.callback_timeout = 1.0 # second
+		self.callback_timestamp = time.time()
+
 
 		rospy.loginfo("Publishing SBUS RC channel on /sbus_rc_ch topic")
 		rospy.loginfo("Subscribing on /sbus_cmd topic for steering and throttle values")
@@ -57,8 +66,10 @@ class JMOAB_ATCart:
 		if len(msg.data) > 0:
 			self.cmd_steering = msg.data[0]
 			self.cmd_throttle = msg.data[1]
-
 			self.send_steering_throttle(self.cmd_steering, self.cmd_throttle)
+			self.callback_timestamp = time.time()
+			
+
 
 	def loop(self):
 
@@ -69,6 +80,12 @@ class JMOAB_ATCart:
 			sbus_ch_array = self.get_sbus_channel()
 			self.sbus_ch.data = sbus_ch_array
 			self.sbus_ch_pub.publish(self.sbus_ch)
+
+			## if there is no sbus command until callback_timeout
+			## then set back to neutral for all 
+			if ((time.time() - self.callback_timestamp) > self.callback_timeout):
+				self.send_steering_throttle(self.sbus_steering_mid, self.sbus_throttle_mid)
+
 
 			rate.sleep()
 
