@@ -16,7 +16,8 @@ Clone this repo to src directory of catkin workspace
 - `git clone https://github.com/rasheeddo/jmoab-ros.git`
 
 Checking that your computer (Jetson or Pi) could detect this device
-- `i2cdetect -y -r 1` then you should see a device address of 0x71
+- For Jetson Nano, it's using i2c bus 1, so you could use this `i2cdetect -y -r 1` then you should see a device address of 0x71
+- For Jetson Xavier NX, it's using i2c bus 8, so you could use this `i2cdetect -y -r 8` then you should see a device address of 0x71
 
 Build a package
 - `cd ~/catkin_ws`
@@ -29,6 +30,8 @@ Source environment
 ## JMOAB with all nodes
 
 `roslaunch jmoab-ros jmoab-ros.alunch` will run all the nodes that have implemented.
+
+Note that the default source code is for Jetson Nano for i2c bus 1, in case you want to use Jetson Xavier NX, you will need to change the i2c bus on [here](https://github.com/rasheeddo/jmoab-ros/blob/3333073baad1f318b0c07b3825c5ef1e6c7bb01a/src/jmoab-ros-atcart.py#L14) to 8. Similar with other jmoab nodes (e.g. IMU).
 
 ## JMOAB with ATCart Wheels
 

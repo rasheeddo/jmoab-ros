@@ -76,7 +76,7 @@ class JMOAB_ATCart:
 		rate = rospy.Rate(100) # 10hz
 
 		while not rospy.is_shutdown():
-			
+
 			sbus_ch_array = self.get_sbus_channel()
 			self.sbus_ch.data = sbus_ch_array
 			self.sbus_ch_pub.publish(self.sbus_ch)
@@ -85,7 +85,6 @@ class JMOAB_ATCart:
 			## then set back to neutral for all 
 			if ((time.time() - self.callback_timestamp) > self.callback_timeout):
 				self.send_steering_throttle(self.sbus_steering_mid, self.sbus_throttle_mid)
-
 
 			rate.sleep()
 
