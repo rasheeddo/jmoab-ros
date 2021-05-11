@@ -73,6 +73,18 @@ So if you place the Jetson upside down (heatsink is pointing down), so there is 
 We can visualize the imu topic by using rviz_imu_plugin (install from here http://wiki.ros.org/rviz_imu_plugin). Then we could run rviz with the config file [here](rviz/jmoab-imu-test.rviz) and [here](rviz/jmoab-imu-repeater.rviz).
 
 
+## JMOAB with ADC
+
+There is Analog-to-Digital converter port where you can use to measure with some sensor devices or battery. The pin header is J7, you could check more detail on the doc [here](docs/AT_JMOAB01_sch201201.pdf). If you are using with ATCart wheel system, then your ESC cable should be plugged on ESC ports (J9 or J10). Then you can monitor the ESC's voltage on A5 channel of ADC.
+
+### Run
+To run the jmoab_ros_adc_node
+- `rosrun jmoab-ros jmoab-ros-adc.py`
+
+List out topics
+- `rostopic list`, you will see there is a topic `jmoab_adc` which is Float32Array message, it contains 6 of voltage values from 6 ADC ports. 
+
+
 
 ## JMOAB with BME680 sensor
 
