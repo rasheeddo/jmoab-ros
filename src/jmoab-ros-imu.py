@@ -21,7 +21,11 @@ class JMOAB_IMU:
 
 		## BNO055 address and registers
 		self.IMU_ADDR = 0x28
+
 		self.OPR_REG = 0x3d
+		self.AXIS_MAP_CONFIG_REG = 0x41
+		self.AXIS_MAP_SIGN_REG = 0x42
+
 		self.QUA_w_LSB = 0x20
 		self.QUA_w_MSB = 0x21
 		self.QUA_x_LSB = 0x22
@@ -30,6 +34,20 @@ class JMOAB_IMU:
 		self.QUA_y_MSB = 0x25
 		self.QUA_z_LSB = 0x26
 		self.QUA_z_MSB = 0x27
+
+		# OPR_REG mode
+		self.CONFIG_MODE = 0x00
+		self.IMU_MODE = 0x08
+		self.NDOF_MODE = 0x0C
+
+		# AXIS REMAP
+		self.REMAP_DEFAULT = 0x24
+
+		# AXIS SIG
+		self.SIGN_DEFAULT = 0x00	# if heatsink is down
+		self.Z_REV = 0x01			# if heatsink is up
+		self.YZ_REV = 0x03
+
 		
 		self.imu_int()
 		self.loop()
@@ -39,8 +57,24 @@ class JMOAB_IMU:
 	def imu_int(self):
 
 		## change to operating mode
-		self.bus.write_byte_data(self.IMU_ADDR, self.OPR_REG, 0x08)
-		time.sleep(0.007)	# 7ms for operating mode
+		self.bus.write_byte_data(self.IMU_ADDR, self.OPR_REG, self.CONFIG_MODE)
+		time.sleep(0.019)	# 7ms for operating mode
+
+		## comment this if no need config
+		self.config_axis_remap()
+		self.config_axis_sign()
+
+		## change to operating mode
+		self.bus.write_byte_data(self.IMU_ADDR, self.OPR_REG, self.NDOF_MODE)
+		time.sleep(0.019)	# 7ms for operating mode
+
+	def config_axis_remap(self):
+		self.bus.write_byte_data(self.IMU_ADDR, self.AXIS_MAP_CONFIG_REG, self.REMAP_DEFAULT)
+		time.sleep(0.019)	# 19ms from any mode to config mode
+
+	def config_axis_sign(self):
+		self.bus.write_byte_data(self.IMU_ADDR, self.AXIS_MAP_SIGN_REG, self.SIGN_DEFAULT)
+		time.sleep(0.019)	# 19ms from any mode to config mode
 
 	def loop(self):
 		rate = rospy.Rate(100) # 10hz
