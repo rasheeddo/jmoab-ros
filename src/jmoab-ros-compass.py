@@ -6,6 +6,7 @@ from std_msgs.msg import Float32MultiArray
 import time
 import struct
 import numpy as np
+import os
 
 class JMOAB_COMPASS:
 
@@ -88,13 +89,31 @@ class JMOAB_COMPASS:
 
 		self.pre_calib = []
 		rospy.loginfo(("Read calibration_offset.txt file"))
-		with open("../example/calibration_offset.txt", "r") as f:
+		jmoab_calib_dir = "/home/nvidia/catkin_ws/src/jmoab-ros/example"
+		calib_file_name = "calibration_offset.txt"
+		calib_file_dir = os.path.join(jmoab_calib_dir, calib_file_name)
+		with open(calib_file_dir, "r") as f:
 			for line in f:
 				self.pre_calib.append(int(line.strip()))
 
 		self.imu_int()
-		self.loop()
 
+		self.checking_non_zero_start()
+
+		hdg_offset_file_name = "heading_offset.txt"
+		hdg_file_dir = os.path.join(jmoab_calib_dir, hdg_offset_file_name)
+		with open(hdg_file_dir, "r") as ff:
+
+			val = ff.read().strip()
+
+		if len(val) == 0:
+			self.hdg_offset = 0.0
+		else:
+			self.hdg_offset = float(val)
+
+		rospy.loginfo("heading offset {:.2f}".format(self.hdg_offset))
+
+		self.loop()
 		rospy.spin()
 
 	def imu_int(self):
@@ -166,6 +185,31 @@ class JMOAB_COMPASS:
 	def config_axis_sign(self, SIGN):
 		self.bus.write_byte_data(self.IMU_ADDR, self.AXIS_MAP_SIGN_REG, SIGN)
 		time.sleep(0.1)	# 19ms from any mode to config mode
+
+	def checking_non_zero_start(self):
+
+		rospy.loginfo("Checking non-zero position from start...")
+		while True:
+			raw = self.bus.read_i2c_block_data(self.IMU_ADDR, self.EUL_X_LSB, 6)
+			hdg,roll,pitch = struct.unpack('<hhh', bytearray(raw))
+
+			hdg = hdg/16.0
+			roll = roll/16.0
+			pitch = pitch/16.0
+
+			if (hdg == 0.0) or (hdg == 360.0):
+				rospy.loginfo("heading is 0.0, try running the code again")
+				quit()
+			else:
+				rospy.loginfo("Compass is ready")
+				break
+
+	def ConvertTo360Range(self, deg):
+
+		if deg < 0.0:
+			deg = deg%360.0
+
+		return deg
 	
 	def loop(self):
 		rate = rospy.Rate(100) # 10hz
@@ -179,6 +223,8 @@ class JMOAB_COMPASS:
 			hdg = hdg/16.0
 			roll = roll/16.0
 			pitch = pitch/16.0
+
+			hdg = self.ConvertTo360Range(hdg-self.hdg_offset)
 
 			self.compass_msg.data = [roll, pitch, hdg]
 

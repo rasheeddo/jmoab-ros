@@ -84,12 +84,72 @@ To run the jmoab_ros_adc_node
 List out topics
 - `rostopic list`, you will see there is a topic `jmoab_adc` which is Float32Array message, it contains 6 of voltage values from 6 ADC ports. 
 
+## JMOAB with F9P GPS
 
+JMOAB has a GPS (UART) port which is connected to pin 8 and 10 of J41 header for `/dev/ttyTHS1` (UART_2).
+
+In order to enable this port to use as regular user, please check on this [link](https://forums.developer.nvidia.com/t/read-write-permission-ttyths1/81623/6
+) or following the step below.
+
+- We will need to disable nvgetty
+
+	```
+	sudo systemctl stop nvgetty
+
+	sudo systemctl disable nvgetty
+	```
+
+- Create a udev rule for ttyTHS* to get permission (without sudo)
+
+	`sudo vim  /etc/udev/rules.d/55-tegraserial.rules`
+	
+- put this content on created udev rule file
+
+	`KERNEL=="ttyTHS*", MODE="0666"`
+	
+- reload rules and reboot
+
+	```
+	sudo udevadm control --reload-rules
+
+	sudo reboot
+	```
+
+
+If the GPS is plugging, then you could see a stream of NMEA or Ublox or both coming in this port.
+
+I am using [this](https://www.sparkfun.com/products/15136) Ublox SparkFun F9P GPS, and fortunately there is an existing ROS package to parse this Ublox message and already pack it to `sensor_msgs/NavSatFix` for us to use, you can check it on KumarRobotics repo [here](https://github.com/KumarRobotics/ublox) and some setup [here](https://qiita.com/k-koh/items/8fd8ef6310e4f40fa536).
+
+Once you clone that package, and did `catkin_make`. Next we need to change the content of config file on `ublox/ublox_gps/config/zed_f9p.yaml`. You can also make the new yaml file for your own. Then we have to put this content in to this file
+
+```
+device: /dev/ttyTHS1
+frame_id: gps
+uart1:
+  baudrate: 115200
+config_on_startup: false
+
+publish:
+        all: false
+        nav:
+                all: true
+                relposned: true
+                posllh: true
+                posecef: true
+```
+
+Make sure you choose the correct baudrate according to your F9P Uart setup. If you don't know what is the baudrate of F9P's UART, you will need to check it with u-center software.
+
+After everything is setup properly, and GPS is plugging on, we could start launch file to get GPS data with this command
+
+`roslaunch ublox_gps ublox_device.launch node_name:=ublox param_file_name:=zed_f9p`
+
+Make sure you specify the correct config file on `param_file_name`.
+
+We could see the gps topic from `rostopic echo /ublox/fix`.
 
 ## JMOAB with BME680 sensor
 
 ...In development process
 
-## JMOAB with F9P GPS
 
-...In development process
