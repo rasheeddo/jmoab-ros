@@ -73,7 +73,7 @@ class JMOAB_ATCart:
 
 	def loop(self):
 
-		rate = rospy.Rate(100) # 10hz
+		rate = rospy.Rate(20) # 10hz
 
 		while not rospy.is_shutdown():
 
