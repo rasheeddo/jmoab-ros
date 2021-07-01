@@ -33,8 +33,8 @@ class Vel2Sbus:
 		self.sbus_skidding_left_min = 940
 		self.sbus_skidding_right_min = 1100
 
-		self.sbus_throttle_fwd_min = 1094
-		self.sbus_throttle_bwd_min = 964
+		self.sbus_throttle_fwd_min = 1090
+		self.sbus_throttle_bwd_min = 970
 
 		self.MIN_SBUS = 368
 		self.MAX_SBUS = 1680
@@ -43,6 +43,9 @@ class Vel2Sbus:
 
 		self.MIN_STEER_FWD_RPM = 25.0
 		self.MIN_STEER_BWD_RPM = 28.0 
+
+		self.Vx_max = 4.4
+		self.Wz_max = 9.7
 
 		## -143	 RPM -->  368
 		## 4.5   RPM -->  1100
@@ -80,29 +83,29 @@ class Vel2Sbus:
 
 		return out
 
-	def RPM2SBUS_Throttle(self,rpm):
+	# def RPM2SBUS_Throttle(self,rpm):
 
-		if rpm == 0.0:
-			sbus = self.sbus_mid
-		else:
-			if rpm > 0.0:
-				sbus = self.map(rpm, 0.0, self.MAX_RPM, self.sbus_throttle_fwd_min, self.MAX_SBUS)
-			else:
-				sbus = self.map(rpm, -self.MAX_RPM, 0.0, self.MIN_SBUS, self.sbus_throttle_bwd_min)
+	# 	if rpm == 0.0:
+	# 		sbus = self.sbus_mid
+	# 	else:
+	# 		if rpm > 0.0:
+	# 			sbus = self.map(rpm, 0.0, self.MAX_RPM, self.sbus_throttle_fwd_min, self.MAX_SBUS)
+	# 		else:
+	# 			sbus = self.map(rpm, -self.MAX_RPM, 0.0, self.MIN_SBUS, self.sbus_throttle_bwd_min)
 
-		return int(sbus)
+	# 	return int(sbus)
 
-	def RPM2SBUS_Skidding(self,rpm):
+	# def RPM2SBUS_Skidding(self,rpm):
 
-		if rpm == 0.0:
-			sbus = self.sbus_mid
-		else:
-			if rpm > 0.0:
-				sbus = self.map(rpm, 0.0, self.MAX_RPM, self.sbus_skidding_right_min, self.MAX_SBUS)
-			else:
-				sbus = self.map(rpm, -self.MAX_RPM, 0.0, self.MIN_SBUS, self.sbus_skidding_left_min)
+	# 	if rpm == 0.0:
+	# 		sbus = self.sbus_mid
+	# 	else:
+	# 		if rpm > 0.0:
+	# 			sbus = self.map(rpm, 0.0, self.MAX_RPM, self.sbus_skidding_right_min, self.MAX_SBUS)
+	# 		else:
+	# 			sbus = self.map(rpm, -self.MAX_RPM, 0.0, self.MIN_SBUS, self.sbus_skidding_left_min)
 
-		return int(sbus)
+	# 	return int(sbus)
 
 	# def RPM2SBUS_Steering(self, rpm):
 	# 	if rpm > 0.0:
@@ -110,50 +113,74 @@ class Vel2Sbus:
 	# 	else:
 	# 		sbus = self.map(rpm, -self.MAX_RPM, self.MIN_STEER_BWD_RPM, self.sbus_steering_mid, self.MAX_SBUS)
 
-	def RPM2SBUS_Mixing(self, rpm_L, rpm_R):
+	# def RPM2SBUS_Mixing(self, rpm_L, rpm_R):
 
-		# print(rpm_L, rpm_R)
-		## upper quadrant 2 or 1
-		if (rpm_L > 0.0) and (rpm_R > 0.0):
-			## curve to right, quadrant 1
-			if (rpm_L > rpm_R):
-				print("1st")
-				sbus_throttle = self.RPM2SBUS_Throttle(rpm_L)
-				sbus_steering = self.map(rpm_R, 0.0, rpm_L, self.MAX_SBUS, self.sbus_steering_mid)
+	# 	# print(rpm_L, rpm_R)
+	# 	## upper quadrant 2 or 1
+	# 	if (rpm_L > 0.0) and (rpm_R > 0.0):
+	# 		## curve to right, quadrant 1
+	# 		if (rpm_L > rpm_R):
+	# 			print("1st")
+	# 			sbus_throttle = self.RPM2SBUS_Throttle(rpm_L)
+	# 			sbus_steering = self.map(rpm_R, 0.0, rpm_L, self.MAX_SBUS, self.sbus_steering_mid)
 			
-			## curve to left, quadrant 2
-			else:
-				print("2nd")
-				sbus_throttle = self.RPM2SBUS_Throttle(rpm_R)
-				sbus_steering = self.map(rpm_L, 0.0, rpm_R, self.MIN_SBUS, self.sbus_steering_mid)
+	# 		## curve to left, quadrant 2
+	# 		else:
+	# 			print("2nd")
+	# 			sbus_throttle = self.RPM2SBUS_Throttle(rpm_R)
+	# 			sbus_steering = self.map(rpm_L, 0.0, rpm_R, self.MIN_SBUS, self.sbus_steering_mid)
 
-		## lower quadrant 3 or 4
-		elif (rpm_L < 0.0) and (rpm_R < 0.0):
-			## curve to left backward, quadrant4, rpm_L more negative than rpm_R
-			if (rpm_L < rpm_R):
-				print("4th")
-				sbus_throttle = self.RPM2SBUS_Throttle(rpm_L)
-				sbus_steering = self.map(rpm_R, rpm_L, 0.0, self.sbus_steering_mid, self.MIN_SBUS)
+	# 	## lower quadrant 3 or 4
+	# 	elif (rpm_L < 0.0) and (rpm_R < 0.0):
+	# 		## curve to left backward, quadrant4, rpm_L more negative than rpm_R
+	# 		if (rpm_L < rpm_R):
+	# 			print("4th")
+	# 			sbus_throttle = self.RPM2SBUS_Throttle(rpm_L)
+	# 			sbus_steering = self.map(rpm_R, rpm_L, 0.0, self.sbus_steering_mid, self.MIN_SBUS)
 			
-			## curve to right backward, quadrant3, rpm_R more negative than rpm_L
-			else:
-				print("3rd")
-				sbus_throttle = self.RPM2SBUS_Throttle(rpm_R)
-				sbus_steering = self.map(rpm_L, rpm_R, 0.0, self.sbus_steering_mid, self.MAX_SBUS)
+	# 		## curve to right backward, quadrant3, rpm_R more negative than rpm_L
+	# 		else:
+	# 			print("3rd")
+	# 			sbus_throttle = self.RPM2SBUS_Throttle(rpm_R)
+	# 			sbus_steering = self.map(rpm_L, rpm_R, 0.0, self.sbus_steering_mid, self.MAX_SBUS)
 
-		## this is likely skidding...
-		elif (rpm_L > 0.0) and (rpm_R < 0.0):
-			print("likely skidding right...")
-			sbus_throttle = self.RPM2SBUS_Throttle(rpm_L)
-			sbus_steering = self.RPM2SBUS_Skidding(rpm_R)
+	# 	## this is likely skidding...
+	# 	elif (rpm_L > 0.0) and (rpm_R < 0.0):
+	# 		print("likely skidding right...")
+	# 		sbus_throttle = self.RPM2SBUS_Throttle(rpm_L)
+	# 		sbus_steering = self.RPM2SBUS_Skidding(rpm_R)
 
-		elif (rpm_L < 0.0) and (rpm_R > 0.0):
-			print("likely skidding left...")
-			sbus_throttle = self.RPM2SBUS_Throttle(rpm_R)
-			sbus_steering = self.RPM2SBUS_Skidding(rpm_L)
+	# 	elif (rpm_L < 0.0) and (rpm_R > 0.0):
+	# 		print("likely skidding left...")
+	# 		sbus_throttle = self.RPM2SBUS_Throttle(rpm_R)
+	# 		sbus_steering = self.RPM2SBUS_Skidding(rpm_Lsbus_steering_mid)
+
+	# 	return int(sbus_steering), int(sbus_throttle)
+
+	def Vel2SBUS_Mixing(self, vx, wz):
+
+		sbus_steering = self.Vel2SBUS_Skidding(wz)
+		sbus_throttle = self.Vel2SBUS_Throttle(vx)
 
 		return int(sbus_steering), int(sbus_throttle)
 
+	def Vel2SBUS_Throttle(self, vx):
+
+		if vx > 0.0:
+			sbus_throttle = self.map(vx, 0.0, self.Vx_max, self.sbus_throttle_fwd_min, self.MAX_SBUS)
+		else:
+			sbus_throttle = self.map(vx, -self.Vx_max, 0.0, self.MIN_SBUS, self.sbus_throttle_bwd_min)
+
+		return int(sbus_throttle)
+
+	def Vel2SBUS_Skidding(self, wz):
+
+		if wz > 0.0:
+			sbus_steering = self.map(wz, 0.0, self.Wz_max, self.sbus_skidding_left_min, self.MIN_SBUS)
+		else:
+			sbus_steering = self.map(wz, -self.Wz_max, 0.0, self.MAX_SBUS, self.sbus_skidding_right_min)
+
+		return int(sbus_steering)
 
 	def Linear2RPM(self, vx):
 		rpm = (vx/2.0)*(180.0/(self.R_wheel*6.0*np.pi))
@@ -184,7 +211,6 @@ class Vel2Sbus:
 					rpm_L = self.Linear2RPM(VL)
 					rpm_R = self.Linear2RPM(VR)
 
-					sbus_steering, sbus_throttle = self.RPM2SBUS_Mixing(rpm_L, rpm_R)
 				else:
 					VL = (sign_vx)*(abs(self.Wz)*(R_icc + self.L_cart/2.0))/2.0
 					VR = (sign_vx)*(abs(self.Wz)*(R_icc - self.L_cart/2.0))/2.0
@@ -192,25 +218,25 @@ class Vel2Sbus:
 					rpm_L = self.Linear2RPM(VL)
 					rpm_R = self.Linear2RPM(VR)
 
-					sbus_steering, sbus_throttle = self.RPM2SBUS_Mixing(rpm_L, rpm_R)
-
-
+				sbus_steering, sbus_throttle = self.Vel2SBUS_Mixing(self.Vx, self.Wz)
 
 			## Go straight foward or backward
 			elif (self.Vx != 0.0) and (self.Wz == 0.0):
 				rpm = self.Linear2RPM(self.Vx)
-				sbus_throttle = self.RPM2SBUS_Throttle(rpm)
-				sbus_steering = self.sbus_mid
 				rpm_L = rpm
 				rpm_R = rpm
+
+				sbus_throttle = self.Vel2SBUS_Throttle(self.Vx)
+				sbus_steering = self.sbus_mid
 
 			## skidding in place
 			elif (self.Vx == 0.0) and (self.Wz != 0.0):
 				rpm = self.Angular2RPM(self.Wz)
-				sbus_steering = self.RPM2SBUS_Skidding(rpm)
-				sbus_throttle = self.sbus_mid
 				rpm_L = rpm
 				rpm_R = -rpm
+
+				sbus_throttle = self.sbus_mid
+				sbus_steering = self.Vel2SBUS_Skidding(self.Wz)
 			## No motion
 			else:
 				rpm_L = 0.0
