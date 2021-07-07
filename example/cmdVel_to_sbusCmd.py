@@ -2,7 +2,6 @@ import rospy
 import numpy as np
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Int32MultiArray, Float32MultiArray
-from simple_pid import PID
 
 class Vel2Sbus:
 
@@ -12,7 +11,6 @@ class Vel2Sbus:
 		rospy.loginfo("Start JMOAB-ROS-CMD_VEL-SBUS_CMD node")
 
 		rospy.Subscriber("/cmd_vel", Twist, self.vel_callback)
-		rospy.Subscriber("/wheel_odom", Float32MultiArray, self.wheel_odom_callback)
 
 		self.sbus_cmd_pub = rospy.Publisher('/sbus_cmd', Int32MultiArray, queue_size=10)
 		self.sbus_cmd = Int32MultiArray()
@@ -32,6 +30,9 @@ class Vel2Sbus:
 
 		self.sbus_skidding_left_min = 940
 		self.sbus_skidding_right_min = 1100
+
+		self.sbus_steering_left_min = 976	#940
+		self.sbus_steering_right_min = 1064	#1100
 
 		self.sbus_throttle_fwd_min = 1090
 		self.sbus_throttle_bwd_min = 970
@@ -57,11 +58,6 @@ class Vel2Sbus:
 		self.loop()
 
 		rospy.spin()
-
-	def wheel_odom_callback(self, msg):
-
-		self.rpm_L = msg.data[0]
-		self.rpm_R = msg.data[1]
 
 	def vel_callback(self, msg):
 
@@ -159,7 +155,7 @@ class Vel2Sbus:
 
 	def Vel2SBUS_Mixing(self, vx, wz):
 
-		sbus_steering = self.Vel2SBUS_Skidding(wz)
+		sbus_steering = self.Vel2SBUS_Steering(wz)
 		sbus_throttle = self.Vel2SBUS_Throttle(vx)
 
 		return int(sbus_steering), int(sbus_throttle)
@@ -179,6 +175,15 @@ class Vel2Sbus:
 			sbus_steering = self.map(wz, 0.0, self.Wz_max, self.sbus_skidding_left_min, self.MIN_SBUS)
 		else:
 			sbus_steering = self.map(wz, -self.Wz_max, 0.0, self.MAX_SBUS, self.sbus_skidding_right_min)
+
+		return int(sbus_steering)
+
+	def Vel2SBUS_Steering(self, wz):
+
+		if wz > 0.0:
+			sbus_steering = self.map(wz, 0.0, self.Wz_max, self.sbus_steering_left_min, self.MIN_SBUS)
+		else:
+			sbus_steering = self.map(wz, -self.Wz_max, 0.0, self.MAX_SBUS, self.sbus_steering_right_min)
 
 		return int(sbus_steering)
 
