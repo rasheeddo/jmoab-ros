@@ -31,8 +31,8 @@ class Vel2Sbus:
 		self.sbus_skidding_left_min = 940
 		self.sbus_skidding_right_min = 1100
 
-		self.sbus_steering_left_min = 976	#940
-		self.sbus_steering_right_min = 1064	#1100
+		self.sbus_steering_left_min = 966	#940
+		self.sbus_steering_right_min = 1074	#1100
 
 		self.sbus_throttle_fwd_min = 1090
 		self.sbus_throttle_bwd_min = 970
