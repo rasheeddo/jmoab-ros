@@ -92,9 +92,14 @@ class JMOAB_COMPASS:
 		jmoab_calib_dir = "/home/nvidia/catkin_ws/src/jmoab-ros/example"
 		calib_file_name = "calibration_offset.txt"
 		calib_file_dir = os.path.join(jmoab_calib_dir, calib_file_name)
-		with open(calib_file_dir, "r") as f:
-			for line in f:
-				self.pre_calib.append(int(line.strip()))
+		if os.path.exists(calib_file_dir):
+			with open(calib_file_dir, "r") as f:
+				for line in f:
+					self.pre_calib.append(int(line.strip()))
+		else:
+			print("There is no calibration_offset.txt file!")
+			print("Do the calibration step first")
+			quit()
 
 		self.imu_int()
 
@@ -102,14 +107,15 @@ class JMOAB_COMPASS:
 
 		hdg_offset_file_name = "heading_offset.txt"
 		hdg_file_dir = os.path.join(jmoab_calib_dir, hdg_offset_file_name)
-		with open(hdg_file_dir, "r") as ff:
+		if os.path.exists(hdg_file_dir):
+			with open(hdg_file_dir, "r") as ff:
 
-			val = ff.read().strip()
+				val = ff.read().strip()
 
-		if len(val) == 0:
-			self.hdg_offset = 0.0
-		else:
-			self.hdg_offset = float(val)
+			if len(val) == 0:
+				self.hdg_offset = 0.0
+			else:
+				self.hdg_offset = float(val)
 
 		rospy.loginfo("heading offset {:.2f}".format(self.hdg_offset))
 
@@ -197,12 +203,16 @@ class JMOAB_COMPASS:
 			roll = roll/16.0
 			pitch = pitch/16.0
 
+			# print(hdg)
+
 			if (hdg == 0.0) or (hdg == 360.0):
 				rospy.loginfo("heading is 0.0, try running the code again")
-				quit()
+				# quit()
 			else:
 				rospy.loginfo("Compass is ready")
 				break
+
+			time.sleep(0.05)
 
 	def ConvertTo360Range(self, deg):
 

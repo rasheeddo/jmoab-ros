@@ -55,13 +55,13 @@ Check more detail on example scripts
 - `rosrun jmoab-ros sbus_cmd_sender.py` for test writing a command steering and throttle from a script
 
 
-## JMOAB with BNO055 9axis IMU 
+## JMOAB with BNO055 9axis Orientation Sensor 
 
 ![](images/default-imu-orientation.jpg)
 
 The default orientation of BNO055 on JMOAB is shown above. As default setup, we will have quaternion data in Fusion mode of IMU. In this mode we will get the data as relative from it firstly started.
 
-### Run 
+### Run as IMU mode
 To run the jmoab_ros_imu_node
 - `rosrun jmoab-ros jmoab-ros-imu.py`
 
@@ -71,6 +71,9 @@ List out topics
 So if you place the Jetson upside down (heatsink is pointing down), so there is no need to do dot product of rotation matrix. You can use that quaternion directly, but if your Jetson is placed regularly (heatsink is point up), then you will need to do dot product of rotation matrix. Please check the detail on example directory `imu_listener.py` for how to use convert quaternion to Euluer angle (roll-pitch-yaw), and `imu_repeater.py` to repeat the raw value and republish with some rotation matrix.
 
 We can visualize the imu topic by using rviz_imu_plugin (install from here http://wiki.ros.org/rviz_imu_plugin). Then we could run rviz with the config file [here](rviz/jmoab-imu-test.rviz) and [here](rviz/jmoab-imu-repeater.rviz).
+
+### Run as compass mode
+To run BNO055 as compass mode on JMOAB, we need to calibrate the sensor offset first, please check on the step on this [link.](example/compass_calibration_step.md)
 
 
 ## JMOAB with ADC

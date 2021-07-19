@@ -31,6 +31,9 @@ class JMOAB_ATCart:
 		rospy.loginfo("Publishing SBUS RC channel on /sbus_rc_ch topic")
 		rospy.loginfo("Subscribing on /sbus_cmd topic for steering and throttle values")
 
+		## If want to bypass sbus failsafe uncomment this
+		self.bypass_sbus_failsafe()
+
 		self.loop()
 
 		rospy.spin()
@@ -61,6 +64,19 @@ class JMOAB_ATCart:
 			SBUS_ch[i] = (input_SBUS[(2*i)+1] & 0xFF) | ((input_SBUS[i*2] & 0xFF) << 8)
 
 		return SBUS_ch
+
+	def bypass_sbus_failsafe(self):
+		## Disable SBUS Failsafe
+		self.bus.write_byte_data(0x71, 0x57, 0x01)
+		time.sleep(0.1)
+
+		## Set back to hold mode
+		self.bus.write_byte_data(0x71, 0x52, 0x00)
+		time.sleep(0.1)
+
+		## Set back to auto mode
+		self.bus.write_byte_data(0x71, 0x52, 0x02)
+		time.sleep(0.1)
 
 	def cmd_callback(self, msg):
 		if len(msg.data) > 0:

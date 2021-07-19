@@ -64,7 +64,7 @@ class APM(object):
 	def run(self):
 
 
-		rate = rospy.Rate(1) # 10hz
+		rate = rospy.Rate(2) # 10hz
 
 		while not rospy.is_shutdown():
 			
