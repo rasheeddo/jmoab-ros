@@ -10,10 +10,11 @@
 - create a blank txt file on example directory as `heading_offset.txt` and put 0.0 on it, this is for when we mount the Jetson and JMOAB on cart, there would be some heading offset with the true cart's heading
 - run these
 	- `roslaunch ublox_gps ublox_device.launch node_name:=ublox param_file_name:=zed_f9p` make sure we have this package with proper config file
-	- ```
-		cd /home/nvidia/RTKLIB/app/consapp/str2str/gcc
-		./str2str -in ntrip://rtk2go.com:2101/KAIT-RTCM3 -out serial://ttyACM0:115200 -b 1
-		``` this is to run RTK and make GPS more accurate, make sure to have RTKLIB install and GPS USB port connect as ttyACM0
+	- 
+		`cd /home/nvidia/RTKLIB/app/consapp/str2str/gcc`
+		`./str2str -in ntrip://rtk2go.com:2101/KAIT-RTCM3 -out serial://ttyACM0:115200 -b 1`
+		 
+	this is to run RTK and make GPS more accurate, make sure to have RTKLIB install and GPS USB port connect as ttyACM0
 	
 	- `rosrun jmoab-ros jmoab-ros-compass.py` to start using compass with sensor offset, it will load heading_offset as 0.0 from the file we created above.
 	- `rosrun jmoab-ros jmoab-ros-atcart.py` to get access of sbus_rc_ch topic
