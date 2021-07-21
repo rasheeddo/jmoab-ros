@@ -195,6 +195,7 @@ class JMOAB_COMPASS:
 	def checking_non_zero_start(self):
 
 		rospy.loginfo("Checking non-zero position from start...")
+		restart_tic = time.time()
 		while True:
 			raw = self.bus.read_i2c_block_data(self.IMU_ADDR, self.EUL_X_LSB, 6)
 			hdg,roll,pitch = struct.unpack('<hhh', bytearray(raw))
@@ -207,7 +208,11 @@ class JMOAB_COMPASS:
 
 			if (hdg == 0.0) or (hdg == 360.0):
 				rospy.loginfo("heading is 0.0, try running the code again")
-				# quit()
+
+				## Give a chance to escape from  0.0 in 5 seconds, then quit restart the code again
+				restart_timeout = time.time() - restart_tic
+				if restart_timeout > 5.0:
+					quit()
 			else:
 				rospy.loginfo("Compass is ready")
 				break
