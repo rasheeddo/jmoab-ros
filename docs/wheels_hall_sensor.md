@@ -13,7 +13,7 @@ You will need the parts below
 - 1pc of Arduino nano
 - 1pc of USB-B mini type
 
-![](../images/actual_sensor.png)
+![](../images/actual_sensor.jpeg)
 
 ### Software
 
@@ -28,7 +28,7 @@ And the source code to use this RPMs on ros node is `jmoab-ros-wheels-rpm.py`
 - attaching a sensors holder on the cart's frame. On the left wheel side, the sensor's cable should be makred as 8 and 9, and on the right side, the sensor cable should be marked as 10 and 12. Those numbers are corresonding to the Arduino pins.
 - adjusting the sensor to close to the magnets ring around 5mm
 
-![](../images/adjusting_sensor.png)
+![](../images/adjusting_sensor.jpeg)
 
 - plug all the sensor cables to Arduino nano, and plug USB port to computer.
 - make sure the computer could detect USB device by using `ls /dev/tty*`, there would be `/dev/ttyUSB0` existing on the list.
