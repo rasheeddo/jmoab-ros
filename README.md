@@ -54,6 +54,10 @@ Check more detail on example scripts
 - `rosrun jmoab-ros sbus_ch_listener.py` for test reading sbus channel on a script
 - `rosrun jmoab-ros sbus_cmd_sender.py` for test writing a command steering and throttle from a script
 
+### Using wheel's hall effect sensor for odometer
+
+The ATCart wheel itself doesn't give a feedback of anything, in order to get RPM of the wheel we need to install extra sensor attaching on the wheel. Please check the detail on [here](docs/wheels_hall_sensor.md).
+
 
 ## JMOAB with BNO055 9axis Orientation Sensor 
 
