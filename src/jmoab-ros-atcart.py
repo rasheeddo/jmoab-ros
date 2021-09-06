@@ -77,6 +77,10 @@ class JMOAB_ATCart:
 		## Set back to auto mode
 		self.bus.write_byte_data(0x71, 0x52, 0x02)
 		time.sleep(0.1)
+		self.bus.write_byte_data(0x71, 0x52, 0x02)
+		time.sleep(0.1)
+		self.bus.write_byte_data(0x71, 0x52, 0x02)
+		time.sleep(0.1)
 
 	def cmd_callback(self, msg):
 		if len(msg.data) > 0:
