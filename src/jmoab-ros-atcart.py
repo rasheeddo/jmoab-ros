@@ -97,6 +97,8 @@ class JMOAB_ATCart:
 		return self.bus.read_byte_data(0x71, self.ATCART_MODE_REG)
 
 	def write_atcart_mode(self, mode_num):
+		## need to write multiple times to take effect
+		## publisher side only sends one time is ok
 		for i in range(10):
 			self.bus.write_byte_data(0x71, self.ATCART_MODE_REG, mode_num)
 
