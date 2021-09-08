@@ -97,7 +97,8 @@ class JMOAB_ATCart:
 		return self.bus.read_byte_data(0x71, self.ATCART_MODE_REG)
 
 	def write_atcart_mode(self, mode_num):
-		self.bus.write_byte_data(0x71, self.ATCART_MODE_REG, mode_num)
+		for i in range(10):
+			self.bus.write_byte_data(0x71, self.ATCART_MODE_REG, mode_num)
 
 
 	def cmd_callback(self, msg):
