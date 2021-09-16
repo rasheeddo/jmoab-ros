@@ -54,6 +54,10 @@ def config_axis_sign(SIGN):
 	bus.write_byte_data(IMU_ADDR, AXIS_MAP_SIGN_REG, SIGN)
 	time.sleep(0.1)	# 19ms from any mode to config mode
 
+def config_remap(REMAP):
+	bus.write_byte_data(IMU_ADDR, AXIS_MAP_CONFIG_REG, REMAP)
+	time.sleep(0.1)	# 19ms from any mode to config mode
+
 # Device
 IMU_ADDR = 0x28
 
@@ -115,6 +119,14 @@ CONF_MODE = 0x00
 IMU_MODE = 0x08
 NDOF_FMC_OFF = 0x0b
 NDOF_MODE = 0x0c
+
+## remap axis
+REMAP_DEFAULT = 0x24
+REMAP_X_Y = 0x21
+REMAP_Y_Z = 0x18
+REMAP_Z_X = 0x06
+REMAP_X_Y_Z_TYPE0 = 0x12
+REMAP_X_Y_Z_TYPE1 = 0x09
 
 ## axis sign
 SIGN_DEFAULT = 0x00	# if heatsink is down

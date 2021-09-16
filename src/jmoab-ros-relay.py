@@ -25,7 +25,7 @@ class JMOAB_Relay:
 
 		rospy.loginfo("Subscribing on /jmoab_relay1 /jmoab_relay2 topics for relays control")
 
-		self.loop()
+		# self.loop()
 
 		rospy.spin()
 
@@ -37,9 +37,11 @@ class JMOAB_Relay:
 
 	def relay1_callback(self, msg):
 		self.relay1_state = msg.data
+		self.set_relay(0, self.relay1_state)
 
 	def relay2_callback(self, msg):
 		self.relay2_state = msg.data
+		self.set_relay(1, self.relay2_state)
 			
 
 
@@ -49,11 +51,11 @@ class JMOAB_Relay:
 
 		while not rospy.is_shutdown():
 
-			if self.prev_relay1_state != self.relay1_state:
-				self.set_relay(0, self.relay1_state)
+			# if self.prev_relay1_state != self.relay1_state:
+			self.set_relay(0, self.relay1_state)
 
-			if self.prev_relay2_state != self.relay2_state:
-				self.set_relay(1, self.relay2_state)
+			# if self.prev_relay2_state != self.relay2_state:
+			self.set_relay(1, self.relay2_state)
 
 
 			self.prev_relay1_state = self.relay1_state

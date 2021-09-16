@@ -81,6 +81,11 @@ class JMOAB_COMPASS:
 
 		# AXIS REMAP
 		self.REMAP_DEFAULT = 0x24
+		self.REMAP_X_Y = 0x21
+		self.REMAP_Y_Z = 0x18
+		self.REMAP_Z_X = 0x06
+		self.REMAP_X_Y_Z_TYPE0 = 0x12
+		self.REMAP_X_Y_Z_TYPE1 = 0x09
 
 		# AXIS SIG
 		self.SIGN_DEFAULT = 0x00	# heatsink is down, usb backward
@@ -190,6 +195,10 @@ class JMOAB_COMPASS:
 
 	def config_axis_sign(self, SIGN):
 		self.bus.write_byte_data(self.IMU_ADDR, self.AXIS_MAP_SIGN_REG, SIGN)
+		time.sleep(0.1)	# 19ms from any mode to config mode
+
+	def config_remap(self, REMAP):
+		self.bus.write_byte_data(self.IMU_ADDR, self.AXIS_MAP_CONFIG_REG, REMAP)
 		time.sleep(0.1)	# 19ms from any mode to config mode
 
 	def checking_non_zero_start(self):
