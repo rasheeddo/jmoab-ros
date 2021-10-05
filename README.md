@@ -155,6 +155,8 @@ Make sure you specify the correct config file on `param_file_name`.
 
 We could see the gps topic from `rostopic echo /ublox/fix`.
 
+To visualize robot's GPS point and heading, please check on [this](example/gcs.md).
+
 ## JMOAB with DJI Ronin-SC control
 
 DJI Ronin-SC handheld camera stabilizer is DSLR camera gimbal. It could be remotely operated by RC transmitter with SBUS signal. For more detail how, please check on this [video](https://www.youtube.com/watch?v=fCnYqv7fR_c&ab_channel=Mad%27sTech). 
