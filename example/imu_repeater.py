@@ -2,6 +2,7 @@
 import rospy
 from sensor_msgs.msg import Imu
 import numpy as np
+from std_msgs.msg import Float32MultiArray
 
 pub = rospy.Publisher('/jmoab_imu_repeat', Imu, queue_size=10)
 _imu_msg = Imu()

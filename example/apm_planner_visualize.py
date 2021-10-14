@@ -611,3 +611,4 @@ if __name__ == "__main__":
 		mission_dir = os.path.join(os.getcwd(),"mission.txt")
 
 	apm_planner = APM(ip, mission_dir)
+	# apm_planner = APM(ip)

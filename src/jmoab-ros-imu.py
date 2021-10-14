@@ -5,6 +5,7 @@ from sensor_msgs.msg import Imu
 import time
 import struct
 import numpy as np
+from sensor_msgs.msg import NavSatFix
 
 class JMOAB_IMU:
 
