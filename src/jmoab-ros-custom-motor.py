@@ -248,7 +248,7 @@ class TMEJ_Motor:
 			if sbus_ch_array[4] != prev_ch5:
 				self.force_auto = False
 
-			## Auto mode
+			## Auto mode, we could change to auto mode by sbus_ch5 and atcart_mode_cmd
 			if (sbus_ch_array[4] > 1500) or self.force_auto:
 				self.x_percent = self.sbus2percent(self.cmd_steering)
 				self.y_percent = self.sbus2percent(self.cmd_throttle)
@@ -266,14 +266,14 @@ class TMEJ_Motor:
 				self.y_percent = 0.0
 				mode_str = "hold"
 
-			
-
+			## from x,y percentages for stick motion, we convert to left/right percentage as -200,200 ranges
 			self.left, self.right = self.xy_mixing(self.x_percent, self.y_percent)
+			## from left/right percentages, we convert to voltage and direction sign
 			self.volt_L, self.dir_L = self.wheel_percent_to_voltage_dir(self.left)
 			self.volt_R, self.dir_R = self.wheel_percent_to_voltage_dir(self.right)
+			## write voltage/dir to i2c device and gpio
 			self.write_i2c(self.DAC_L, self.volt_L)
 			self.write_i2c(self.DAC_R, self.volt_R)
-
 			self.write_gpio(self.dir_L, self.dir_R)
 
 			# if there is no sbus command until callback_timeout
