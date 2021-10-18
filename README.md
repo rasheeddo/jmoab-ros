@@ -157,6 +157,32 @@ We could see the gps topic from `rostopic echo /ublox/fix`.
 
 To visualize robot's GPS point and heading, please check on [this](example/gcs.md).
 
+To get a precise position, it's better to use RTK base station with F9P GPS. So please following a step below to install RTKLIB.
+
+- `sudo apt-get install gfortran`
+
+- `git clone https://github.com/tomojitakasu/RTKLIB.git`
+
+- `cd RTKLIB`
+
+- `git checkout rtklib_2.4.3`
+
+- `cd lib/iers/gcc`
+
+- `make`
+
+- `cd ../../../app/consapp/str2str/gcc`
+
+- `make`
+
+You will get str2str binary file at `RTKLIB/app/consapp/str2str/gcc/`, so before using it please check the base station from [here](http://rtk2go.com:2101/SNIP::STATUS) where closed to your place.
+
+To run RTKLIB, you need to plub USB cable from F9P's USB to Jetson, it should be recognized as `/dev/ttyACM0` or something similar, then we could run the str2str binary as,
+
+	`./str2str -in ntrip://rtk2go.com:2101/InohanaKobo -out serial://ttyACM0:115200 -b 1`
+
+You must change your base station place according to where the closet to your place, in my case it's `InohanaKobo`.
+
 ## JMOAB with DJI Ronin-SC control
 
 DJI Ronin-SC handheld camera stabilizer is DSLR camera gimbal. It could be remotely operated by RC transmitter with SBUS signal. For more detail how, please check on this [video](https://www.youtube.com/watch?v=fCnYqv7fR_c&ab_channel=Mad%27sTech). 
