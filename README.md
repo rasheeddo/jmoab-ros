@@ -210,15 +210,15 @@ To run JMOAB ROS as SITL (without the actual hardware), at least we should have 
 
 ### Run
 
-	`rosrun joy joy_node`
+	rosrun joy joy_node
 
-	`rosrun jmoab-ros jmoab-ros-atcart-simulation.py`
+	rosrun jmoab-ros jmoab-ros-atcart-simulation.py
 
 Start atcart simulation node, this will start an `atcart` node simulation which going to pubish `atcart_mode` as current mode, and to subscribe `atcart_mode_cmd` to get command mode, and `sbus_cmd` for sbus values of steering and throttle. So we can have the same manner of topics similar to the real cart. The robot mode in gazebo is using `cmd_vel` topic for drive the wheel, so this node will publish the `cmd_vel` according to the input of `sbus_cmd` topic or `joy` node from user manual control.
 
 Once you change the mode by pressing X button on gamepad, the rover will be in manual mode, so you can drive it by throttle and steering analog stick as shown on image above. And once you pressed A button on gamepad, it will be in auto mode, and will listen on `sbus_cmd` topic for an autonomous drive program. B button is for hold mode, so it will stop moving. 
 
-	`rosrun jmoab-ros jmoab-ros-compass-simulation.py`
+	rosrun jmoab-ros jmoab-ros-compass-simulation.py
 
 Start a compass simulation node, this will be useful for outdoor GPS navigation, so you need to make sure there is `imu` topic publishing before. This node will publish `jmoab_compass` topic which is `[roll, pitch, heading]` std_msgs/Float32MultiArray the same as original `jmoab_compass` message. And also you can press Y button to do the `heading calibration` the same mannaer as `jmoab-compass.py` node as explained [at the end here](https://github.com/rasheeddo/jmoab-ros/blob/master/example/compass_calibration_step.md). Please make sure you have `ublox/fix` topic publishing.
 
