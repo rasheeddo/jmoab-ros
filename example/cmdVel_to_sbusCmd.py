@@ -64,6 +64,7 @@ class Vel2Sbus:
 		self.Vx = msg.linear.x
 		self.Wz = msg.angular.z
 
+
 	def map(self, val, in_min, in_max, out_min, out_max):
 
 		# out = ((val - in_min) * ((out_max - out_min) / (in_max - in_min))) + out_min

@@ -4,6 +4,7 @@ import argparse
 import rospy
 from sensor_msgs.msg import NavSatFix
 from std_msgs.msg import Float32MultiArray, Int8, Int32MultiArray
+from jmoab_autopilot_ros.msg import GoalWaypoints
 import numpy as np
 import os
 import sys
