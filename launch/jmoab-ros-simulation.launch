@@ -6,4 +6,6 @@
 
 	<node pkg="jmoab-ros" name="jmoab_ros_imu_node" type="jmoab-ros-compass-simulation.py" output="screen"/>
 
+	<node pkg="jmoab-ros" name="jmoab_ros_imu_node" type="jmoab-ros-adc-simulation.py" output="screen"/>
+
 </launch>

@@ -222,6 +222,14 @@ Once you change the mode by pressing X button on gamepad, the rover will be in m
 
 Start a compass simulation node, this will be useful for outdoor GPS navigation, so you need to make sure there is `imu` topic publishing before. This node will publish `jmoab_compass` topic which is `[roll, pitch, heading]` std_msgs/Float32MultiArray the same as original `jmoab_compass` message. And also you can press Y button to do the `heading calibration` the same mannaer as `jmoab-compass.py` node as explained [at the end here](https://github.com/rasheeddo/jmoab-ros/blob/master/example/compass_calibration_step.md). Please make sure you have `ublox/fix` topic publishing.
 
+	rosrun jmoab-ros jmoab-ros-adc-simulation.py
+
+This is going to start a battery measurement simulation node, it's specified to use with 6S LiPo battery, so with fully charged it's 25.2V, and it could stay around 6 hours for a small cart. So first element of `/jmoab_adc` is a battery remaining voltage. We could try to simulate other Analog-To-Digital signal later on.
+
+
+Or for a better convenience, we could run all of required nodes in a launch file as a command below
+
+	roslaunch jmoab-ros jmoab-ros-simulation.launch
 
 
 ## JMOAB with BME680 sensor
