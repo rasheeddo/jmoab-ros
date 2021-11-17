@@ -48,6 +48,10 @@ class Imu2Compass:
 		self.sbus_steering = 1024
 		self.sbus_throttle = 1160
 
+		self.fix_stat = 0
+		self.sbus_steering_stick = 0.0
+		self,sbus_throttle_stick = 0.0
+
 		self.loop()
 
 		rospy.spin()
@@ -67,10 +71,15 @@ class Imu2Compass:
 		elif msg.buttons[3] == 0:
 			self.calib_flag = False
 
+		self.sbus_steering_stick = msg.axes[3]
+		self,sbus_throttle_stick = msg.axes[1]
+
 	def gps_callback(self, msg):
 
 		self.lat = msg.latitude
 		self.lon = msg.longitude
+
+		self.fix_stat = msg.status.status
 
 	def atcart_mode_callback(self, msg):
 		self.cart_mode = msg.data
@@ -139,6 +148,13 @@ class Imu2Compass:
 
 			pure_hdg = self.heading
 			hdg = self.ConvertTo360Range(self.heading - self.hdg_offset)
+
+			# ## rtk-fixed, ready to do calibration
+			# if self.fix_stat == 2:
+			# 	## in manual case
+			# 	if self.cart_mode == 1:
+			# 		## throttle must move up, and no steering
+			# 		if (self.sbus_throttle_stick > 0.3) and (-0.2 < self.sbus_steering_stick < 0.2):
 
 
 			#######################################

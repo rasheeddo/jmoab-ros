@@ -1,4 +1,4 @@
-## Wheel's Odometer
+## Wheel's Odometer (Old design)
 
 ![](../images/hall_wheels.png)
 
@@ -39,3 +39,15 @@ And the source code to use this RPMs on ros node is `jmoab-ros-wheels-rpm.py`
 
 ***NOTE***
 The minimum RPM that this sensor can read is +/-5 rpm, lower than this value it will give 0 rpm.
+
+## Wheel's Odometer (New design)
+
+The hardware components of new design are same as old one, but this one is using PCB board to attach both hall effect IC of one side.
+
+![](../images/AT_HALL01_diagram.png)
+
+The magnet ring of this new design uses simple 1mm double-sided tape to attach on wheel's surface. The sensor holder is used to hold PCB of AT_HALL01. You can check on the wiring below. The AT_HALL01 uses 4pin JST connector (BM04B-GHS-TBT).
+
+![](../images/AT_HALL01_schematic.png)
+
+Arduino's firmware and `jmoab-ros-wheels-rpm` are same.

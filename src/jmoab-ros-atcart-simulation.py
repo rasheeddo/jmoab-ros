@@ -117,7 +117,7 @@ class ATCartSim:
 			else:
 				wz = 0.0
 		else:
-			if self.cmd_steering != 1024:
+			if steering != 1024:
 				wz = self.map(steering, self.sbus_min, self.sbus_max, self.min_ang_vel, self.max_ang_vel)
 			else:
 				wz = 0
@@ -157,8 +157,8 @@ class ATCartSim:
 			self.atcart_mode = self.cart_mode
 			self.atcart_mode_pub.publish(self.atcart_mode)
 
-			#print("mode: {:} |str: {:d} | thr: {:d} | vx: {:.2f} | wz: {:.2f}".format(\
-			#	self.mode_name, sbus_steering, sbus_throttle, vx, wz))
+			# print("mode: {:} |str: {:d} | thr: {:d} | vx: {:.2f} | wz: {:.2f}".format(\
+			# 	self.mode_name, sbus_steering, sbus_throttle, vx, wz))
 
 			rate.sleep()
 
