@@ -51,3 +51,5 @@ The magnet ring of this new design uses simple 1mm double-sided tape to attach o
 ![](../images/AT_HALL01_schematic.png)
 
 Arduino's firmware and `jmoab-ros-wheels-rpm` are same.
+
+Please check on [this video](https://youtu.be/tCoUMoUfn2s), of how to operate it.
