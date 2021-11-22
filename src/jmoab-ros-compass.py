@@ -22,20 +22,13 @@ class JMOAB_COMPASS:
 		self.compass_msg = Float32MultiArray()
 		self.hdg_calib_flag_pub = rospy.Publisher("/hdg_calib_flag", Bool, queue_size=10)
 		self.hdg_calib_flag_msg = Bool()
-		self.sbus_cmd_pub = rospy.Publisher("/sbus_cmd", Int32MultiArray, queue_size=10)
-		self.sbus_cmd = Int32MultiArray()
+		# self.sbus_cmd_pub = rospy.Publisher("/sbus_cmd", Int32MultiArray, queue_size=10)
+		# self.sbus_cmd = Int32MultiArray()
 		self.atcart_mode_cmd_pub = rospy.Publisher("/atcart_mode_cmd", Int8, queue_size=10)
 		self.atcart_mode_cmd_msg = Int8()
 
 		rospy.loginfo("Publishing Roll-Pitch-Heading /jmoab_compass topic respect to true north")
 		rospy.loginfo("Publishing Calibration flag as /hdg_calib_flag in case of calibrating")
-
-		rospy.Subscriber("/ublox/fix", NavSatFix, self.gps_callback)
-		rospy.Subscriber("/sbus_rc_ch", Int32MultiArray, self.sbus_callback)
-
-		rospy.Subscriber("/heading", QuaternionStamped, self.heading_ref_callback)
-		rospy.Subscriber("atcart_mode", Int8, self.atcart_mode_callback)
-		rospy.Subscriber("/sbus_rc_ch", Int32MultiArray, self.sbus_callback)
 
 		## BNO055 address and registers
 		self.IMU_ADDR = 0x28
@@ -161,13 +154,81 @@ class JMOAB_COMPASS:
 		self.prev_hdg_ref_smooth = 0.0
 		self.robot_move_stamp = time.time()
 
+
+		self.sbus_cmd_throttle = 1024
+		self.sbus_cmd_steering = 1024
+		self.fix_stat = 0
+		self.sbus_steering_stick = 1024
+		self.sbus_throttle_stick = 1024
+		self.prev_lat = self.lat
+		self.prev_lon = self.lon
+		self.pure_hdg = 0.0
+		self.sign = 1.0
+		self.brg = 0.0
+		self.last_time_manual_cal = time.time()
+		self.last_time_auto_cal = time.time()
+		self.cal_offset = False
+		self.do_estimation = False
+
+		## Kalman filter of hdg_offset estimate
+		self.hdg_off_est = 20.0 # first guess
+		self.state_predict = self.hdg_off_est
+		self.error_est = 10.0 
+		self.error_mea = 8.0 # a variance of
+
+
+		rospy.Subscriber("/ublox/fix", NavSatFix, self.gps_callback)
+		rospy.Subscriber("/sbus_rc_ch", Int32MultiArray, self.sbus_callback)
+
+		rospy.Subscriber("/heading", QuaternionStamped, self.heading_ref_callback)
+		rospy.Subscriber("atcart_mode", Int8, self.atcart_mode_callback)
+		rospy.Subscriber("/sbus_cmd", Int32MultiArray, self.sbus_cmd_callback)
+
+
 		self.loop()
 		rospy.spin()
 
 	def gps_callback(self, msg):
 
+		self.prev_lat = self.lat
+		self.prev_lon = self.lon
+
 		self.lat = msg.latitude
 		self.lon = msg.longitude
+
+		self.fix_stat = msg.status.status
+
+		###########################################################################
+		## we put the calculation/estimation inside the gps_callback             ##
+		## because the sampling time of gps is slowest,                          ##
+		## so we could get the real difference between current and previous data ##
+		###########################################################################
+		if self.do_estimation:
+			self.brg = self.get_bearing(self.prev_lat, self.prev_lon, self.lat, self.lon)
+			self.brg = self.ConvertTo360Range(self.brg)
+
+			if self.cart_mode == 1:
+
+				self.period_manual_cal = time.time() - self.last_time_manual_cal
+
+				if self.period_manual_cal > 1.0:
+					self.hdg_offset, self.sign = self.find_smallest_diff_ang(self.brg, self.pure_hdg)
+					self.cal_offset = True
+					self.hdg_off_est = self.kalman_filter(self.hdg_offset, self.state_predict, self.error_est)
+			elif self.cart_mode == 2:
+
+				self.period_auto_cal = time.time() - self.last_time_auto_cal
+
+				if self.period_auto_cal > 0.3:
+					self.hdg_offset, self.sign = self.find_smallest_diff_ang(self.brg, self.pure_hdg)
+					self.cal_offset = True
+					self.hdg_off_est = self.kalman_filter(self.hdg_offset, self.state_predict, self.error_est)
+
+
+	def sbus_cmd_callback(self, msg):
+
+		self.sbus_cmd_steering = msg.data[0]
+		self.sbus_cmd_throttle = msg.data[1]
 
 	def heading_ref_callback(self, data):
 		qw = data.quaternion.w
@@ -194,11 +255,9 @@ class JMOAB_COMPASS:
 		self.cart_mode = msg.data
 
 	def sbus_callback(self, msg):
-		if ((986 > msg.data[0]) or (msg.data[0] > 1062)) or ((986 > msg.data[1]) or (msg.data[1] > 1062)):
-			self.robot_move = True
-			# print("Robot is moving!!!")
-		else:
-			self.robot_move = False
+
+		self.sbus_steering_stick = msg.data[0]
+		self.sbus_throttle_stick = msg.data[1]
 
 		if msg.data[6] > 1500:
 			self.calib_flag = True
@@ -371,133 +430,155 @@ class JMOAB_COMPASS:
 		data_ave = np.average(data_array)
 		return data_ave, data_array
 
+	def kalman_filter(self, measure, prev_state_est, prev_error_est):
+
+		## reference
+		## https://www.kalmanfilter.net/kalman1d.html
+
+		######################
+		## state estimation ##
+		######################
+		KG = prev_error_est/(prev_error_est + self.error_mea)
+		cur_state_est = prev_state_est + KG*(measure - prev_state_est)
+		cur_error_est = (1 - KG)*(prev_error_est)
+
+		################
+		## prediction ##
+		################
+		self.error_est = cur_error_est + 0.01 # 0.01 is process noise, could help when hdg_offset is fluctuating during time
+		
+		# hdg_offset is not dynamic behaviour, so predicted state is constant as estimated state
+		self.state_predict = cur_state_est  
+
+		return cur_state_est
 	
 	def loop(self):
 		rate = rospy.Rate(100) # 10hz
-		pure_hdg = 0.0
-		hdg_ref_smooth = 0.0
-		first = True
-		hdg_ref_list = np.array([])
-		diff_hdg_list = np.array([])
+		# pure_hdg = 0.0
+
 		while not rospy.is_shutdown():
 			startTime = time.time()
 
 			raw = self.bus.read_i2c_block_data(self.IMU_ADDR, self.EUL_X_LSB, 6)
-			hdg,roll,pitch = struct.unpack('<hhh', bytearray(raw))
+			pure_hdg,roll,pitch = struct.unpack('<hhh', bytearray(raw))
 
-			hdg = hdg/16.0
+			pure_hdg = pure_hdg/16.0
 			roll = roll/16.0
 			pitch = pitch/16.0
-			pure_hdg = self.ConvertTo360Range(hdg)
+			# pure_hdg = self.ConvertTo360Range(hdg)
+			self.pure_hdg = self.ConvertTo360Range(pure_hdg)
 			
-			hdg = self.ConvertTo360Range(hdg - self.hdg_offset)
-			# hdg = self.ConvertTo360Range(hdg - self.hdg_offset + self.diff_hdg)
-			#hdg = self.ConvertTo360Range(hdg - self.hdg_offset + self.diff_hdg_ave)
-			#print("pure hdg {:.4f} | hdg_ref {:.4f} | diff_hdg {:.4f} | hdg_ref_smooth {:.4f}".format(\
-			#	pure_hdg, self.hdg_ref, self.diff_hdg, hdg_ref_smooth)) 
+			# hdg = self.ConvertTo360Range(hdg - self.hdg_offset)
+			hdg = self.ConvertTo360Range(self.pure_hdg + (self.sign)*self.hdg_off_est)
+
+			#############################################################
+			## hdg_offset calculation by two points gps bearing angle, ##
+			## and estimation by Kalman Filter                         ##
+			#############################################################
+
+			## must be rtk-fixed, to get precise position
+			if self.fix_stat == 2:
+				## in manual case
+				if self.cart_mode == 1:
+					###############################################################
+					## we do estimation only when throttle is up and no steering ##
+					###############################################################
+					if (self.sbus_throttle_stick > 1048) and (924 < self.sbus_steering_stick < 1124):
+						
+						self.do_estimation = True
+
+					else:
+						self.last_time_manual_cal = time.time()
+						self.last_time_auto_cal = time.time()
+						self.cal_offset = False
+						self.do_estimation = False
+
+				## in auto case
+				elif self.cart_mode == 2:
+					#######################################################
+					## we do estimation only when sbus throttle is high, ##
+					## and sbus steering is no curvy                     ##
+					#######################################################
+					if (self.sbus_cmd_throttle > 1090) and (970 < self.sbus_cmd_steering < 1074):
+
+						self.do_estimation = True
+
+					else:
+						self.last_time_manual_cal = time.time()
+						self.last_time_auto_cal = time.time()
+						self.cal_offset = False
+						self.do_estimation = False
+
+				else:
+					self.last_time_manual_cal = time.time()
+					self.last_time_auto_cal = time.time()
+
+			print("p_hdg: {:.2f} | hdg: {:.2f} | hdg_off: {:.2f} | hdg_off_est: {:.2f} | brg: {:.2f} | cal_offset: {:}".format(\
+				self.pure_hdg, hdg, self.hdg_offset, self.hdg_off_est, self.brg, self.cal_offset))
+
+
 			#######################################
 			### Live heading offset calibration ###
 			#######################################
-			if self.calib_flag:
-				if self.get_latlon_once:
-					lat_start = self.lat
-					lon_start = self.lon
-					self.get_latlon_once = False
-					self.hdg_offset = 0.0
-					# hdg = self.ConvertTo360Range(hdg-self.hdg_offset)
-					self.start_hdg = pure_hdg
-					rospy.loginfo("Start heading offset calibrating with start_hdg {:.2f} hdg_offset {:.2f}".format(self.start_hdg, self.hdg_offset))
+			# if self.calib_flag:
+			# 	if self.get_latlon_once:
+			# 		lat_start = self.lat
+			# 		lon_start = self.lon
+			# 		self.get_latlon_once = False
+			# 		self.hdg_offset = 0.0
+			# 		# hdg = self.ConvertTo360Range(hdg-self.hdg_offset)
+			# 		self.start_hdg = pure_hdg
+			# 		rospy.loginfo("Start heading offset calibrating with start_hdg {:.2f} hdg_offset {:.2f}".format(self.start_hdg, self.hdg_offset))
 
-					######################################################################
-					## Set hdg_calib_flag to True to let other autopilot node knows     ##
-					## Set atcart_mode to auto, we're gonna use auto mode straight line ##
-					######################################################################
-					self.hdg_calib_flag_msg.data = True
-					self.hdg_calib_flag_pub.publish(self.hdg_calib_flag_msg)
-					self.atcart_mode_cmd_msg.data = 2
-					self.atcart_mode_cmd_pub.publish(self.atcart_mode_cmd_msg)
-					time.sleep(0.5)	# a bit of delay to make sure it's not gonna immediately move
+			# 		######################################################################
+			# 		## Set hdg_calib_flag to True to let other autopilot node knows     ##
+			# 		## Set atcart_mode to auto, we're gonna use auto mode straight line ##
+			# 		######################################################################
+			# 		self.hdg_calib_flag_msg.data = True
+			# 		self.hdg_calib_flag_pub.publish(self.hdg_calib_flag_msg)
+			# 		self.atcart_mode_cmd_msg.data = 2
+			# 		self.atcart_mode_cmd_pub.publish(self.atcart_mode_cmd_msg)
+			# 		time.sleep(0.5)	# a bit of delay to make sure it's not gonna immediately move
 
-				###############################
-				## keep getting last lat/lon ##
-				###############################
-				lat_last = self.lat
-				lon_last = self.lon
+			# 	###############################
+			# 	## keep getting last lat/lon ##
+			# 	###############################
+			# 	lat_last = self.lat
+			# 	lon_last = self.lon
 
-				self.ch7_from_high = True
-				#################################
-				## keep drive as straight line ##
-				#################################
-				self.sbus_cmd.data = [self.sbus_steering, self.sbus_throttle]
-				self.sbus_cmd_pub.publish(self.sbus_cmd)
-
-
-
-			elif (self.calib_flag == False) and self.ch7_from_high:
-				##################################################################
-				## switch atcart_mode back to manual to make it completely stop ##
-				## send False on hdg_calib_flag to let autopilot node knows     ##
-				##################################################################
-				self.atcart_mode_cmd_msg.data = 1
-				self.atcart_mode_cmd_pub.publish(self.atcart_mode_cmd_msg)
-				time.sleep(0.5) # a bit of delay makes other autopilot node not freak out
-				self.hdg_calib_flag_msg.data = False
-				self.hdg_calib_flag_pub.publish(self.hdg_calib_flag_msg)
-
-				self.sbus_cmd.data = [1024, 1024]
-				self.sbus_cmd_pub.publish(self.sbus_cmd)
+			# 	self.ch7_from_high = True
+			# 	#################################
+			# 	## keep drive as straight line ##
+			# 	#################################
+			# 	self.sbus_cmd.data = [self.sbus_steering, self.sbus_throttle]
+			# 	self.sbus_cmd_pub.publish(self.sbus_cmd)
 
 
-				self.ch7_from_high = False
-				line_hdg = self.get_bearing(lat_start, lon_start, lat_last, lon_last)
-				self.hdg_offset = self.start_hdg - self.ConvertTo360Range(line_hdg)
-				rospy.loginfo("heading offset {:.2f}".format(self.hdg_offset))
+
+			# elif (self.calib_flag == False) and self.ch7_from_high:
+			# 	##################################################################
+			# 	## switch atcart_mode back to manual to make it completely stop ##
+			# 	## send False on hdg_calib_flag to let autopilot node knows     ##
+			# 	##################################################################
+			# 	self.atcart_mode_cmd_msg.data = 1
+			# 	self.atcart_mode_cmd_pub.publish(self.atcart_mode_cmd_msg)
+			# 	time.sleep(0.5) # a bit of delay makes other autopilot node not freak out
+			# 	self.hdg_calib_flag_msg.data = False
+			# 	self.hdg_calib_flag_pub.publish(self.hdg_calib_flag_msg)
+
+			# 	self.sbus_cmd.data = [1024, 1024]
+			# 	self.sbus_cmd_pub.publish(self.sbus_cmd)
 
 
-			else:
-				self.get_latlon_once = True
-				self.ch7_from_high = False
+			# 	self.ch7_from_high = False
+			# 	line_hdg = self.get_bearing(lat_start, lon_start, lat_last, lon_last)
+			# 	self.hdg_offset = self.start_hdg - self.ConvertTo360Range(line_hdg)
+			# 	rospy.loginfo("heading offset {:.2f}".format(self.hdg_offset))
 
-			##################################################
-			### Compare with reference heading from TwoGPS ###
-			##################################################
-			# robot_move_period = time.time() - self.robot_move_stamp
-			# if self.hdg_ref_flag and (self.cart_mode != 2) and (not self.robot_move) and (robot_move_period > 3.0):
-			# # if self.hdg_ref_flag and (self.cart_mode != 2) :
-			# 	# hdg_ref_ave, hdg_ref_list = self.MovingAverage(self.hdg_ref, hdg_ref_list, self.hdg_ref_list_length)
-			# 	# if first:
-			# 	# 	hdg_ref_smooth = self.hdg_ref
-			# 	# 	first = False
-			# 	# else:
-			# 	# 	hdg_ref_smooth = self.hdg_ref*0.05 + self.prev_hdg_ref_smooth*0.95
 
-			# 	# _diff_hdg, sign = self.find_smallest_diff_ang(hdg_ref_smooth, pure_hdg)
-			# 	# _diff_hdg, sign = self.find_smallest_diff_ang(hdg_ref_ave, pure_hdg)
-			# 	_diff_hdg, sign = self.find_smallest_diff_ang(self.hdg_ref, pure_hdg)
-
-			# 	if _diff_hdg > 5.0:
-			# 		self.diff_hdg = _diff_hdg*sign
-
-			# 	self.diff_hdg_ave, diff_hdg_list = self.MovingAverage(self.diff_hdg, diff_hdg_list, self.diff_hdg_list_length)
-
-			# 	self.from_diff_cal = True
-
-			# # else:
-			# # 	if not self.from_diff_cal:
-			# # 		self.diff_hdg = 0.0
-			# if self.robot_move:
-			# 	hdg_ref_list = np.array([])
-			# 	diff_hdg_list = np.array([])
-			# 	hdg_ref_smooth = hdg
-			# 	self.robot_move_stamp = time.time()
-
-			# ## in case heading topic is disappear longer than timeout
-			# ## we set hdg_ref_flag back to False
-			# if ((time.time() - self.hdg_ref_timestamp) > self.hdg_ref_timeout):
-			# 	print("Heading refernce timeout...")
-			# 	self.hdg_ref_flag = False
-			# 	self.from_diff_cal = False
-			# self.prev_hdg_ref_smooth = hdg_ref_smooth
+			# else:
+			# 	self.get_latlon_once = True
+			# 	self.ch7_from_high = False
 
 
 			self.compass_msg.data = [roll, pitch, hdg]
