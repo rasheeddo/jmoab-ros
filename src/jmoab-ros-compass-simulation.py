@@ -255,7 +255,7 @@ class Imu2Compass:
 		################
 		## prediction ##
 		################
-		self.error_est = cur_error_est + 0.01 # 0.001 is process noise, could be removed
+		self.error_est = cur_error_est + 0.01 # 0.01 is process noise, could help when hdg_offset is fluctuating during time
 		# hdg_offset is not dynamic behaviour, so predicted state is constant as estimated state
 		self.state_predict = cur_state_est  
 

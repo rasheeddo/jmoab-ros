@@ -1,0 +1,19 @@
+<launch>
+
+	<!-- We create a dummy map frame to let ekf_odom and odom have same references-->
+    <node pkg="tf" type="static_transform_publisher" name="map_to_odom" args="1.0 0.0 0.0 0.0 0.0 0.0 1.0 /map /odom 100" />
+    <node pkg="tf" type="static_transform_publisher" name="map_to_ekf_odom" args="1.0 0.0 0.0 0.0 0.0 0.0 1.0 /map /ekf_odom 100" />
+    <remap from="/jmoab_imu_raw" to="/imu_data" />
+
+	<node pkg="jmoab-ros" name="jmoab_ros_atcart_node" type="jmoab-ros-atcart.py" output="screen"/>
+    <node pkg="jmoab-ros" name="jmoab_ros_imu_node" type="jmoab-ros-imu.py" output="screen"/>
+
+    <!-- For hall sensor wheel odometry-->
+    <node pkg="jmoab-ros" name="jmoab_ros_wheels_rpm_node" type="jmoab-ros-wheels-rpm.py" args="/dev/ttyUSB0" output="screen"/>
+    <node pkg="jmoab-ros" name="ekf_odom_generate" type="ekf_odom_generate.py" output="screen"/>
+
+    <!-- For robot_pose_ekf-->
+    <!-- <include file="$(find robot_pose_ekf)/robot_pose_ekf.launch" /> -->
+
+
+</launch>

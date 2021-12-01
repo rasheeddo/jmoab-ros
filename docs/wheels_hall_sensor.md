@@ -53,3 +53,29 @@ The magnet ring of this new design uses simple 1mm double-sided tape to attach o
 Arduino's firmware and `jmoab-ros-wheels-rpm` are same.
 
 Please check on [this video](https://youtu.be/tCoUMoUfn2s), of how to operate it.
+
+## Nodes
+
+Once you started `jmoab-ros-wheels-rpm.py`, it's publishing
+
+- `wheels_rpm` as array of [left_rpm, right_rpm]
+
+- `wheels_speed` as array of [VL, VR], linear velocity of the wheels
+
+- `odom` as Odometry topic, this is quite poor because our sensor is only 8 ticks per revolution.
+
+To improve the odom topic, we need [robot_pose_ekf package](http://wiki.ros.org/robot_pose_ekf) to fuse the sensor of wheel's odometry with IMU sensors.
+
+I changed [this](https://github.com/ros-planning/robot_pose_ekf/blob/fd6cef32b447e8b344a1111373e515aa2f8bfc50/robot_pose_ekf.launch#L5) `base_footprint` to `base_link`, and disable [this](https://github.com/ros-planning/robot_pose_ekf/blob/fd6cef32b447e8b344a1111373e515aa2f8bfc50/robot_pose_ekf.launch#L10) `vo_used` to false.
+
+You will need to run
+
+	roslaunch jmoab-ros jmoab-ros-ekf-odom-test.launch
+
+to start the nodes, and also
+
+	roslaunch robot_pose_ekf robot_pose_ekf.launch
+
+You will get `ekf_odom` topic for a fused odom. Please check on this [demo video](https://www.youtube.com/watch?v=SlqJzMmxYxU&ab_channel=stepbystep-robotics).
+
+The green arrow is `ekf_odom`, red arrow is original `odom`.
