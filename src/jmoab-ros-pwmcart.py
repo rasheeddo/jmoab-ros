@@ -37,6 +37,9 @@ class JMOAB_PWMCart:
 		self.callback_timeout = 1.0 # second
 		self.callback_timestamp = time.time()
 
+		self.rev_str = True #False
+		self.rev_thr = True
+
 
 		rospy.loginfo("Publishing SBUS RC channel on /sbus_rc_ch topic")
 		rospy.loginfo("Subscribing on /sbus_cmd topic for steering and throttle values")
@@ -85,8 +88,15 @@ class JMOAB_PWMCart:
 
 	def channel_mixing(self, str_ch, thr_ch):
 
-		y = self.map(thr_ch, self.sbus_min, self.sbus_max, -100.0, 100.0)
-		x = self.map(str_ch, self.sbus_min, self.sbus_max, -100.0, 100.0)
+		if self.rev_thr:
+			y = self.map(thr_ch, self.sbus_min, self.sbus_max, 100.0, -100.0)
+		else:
+			y = self.map(thr_ch, self.sbus_min, self.sbus_max, -100.0, 100.0)
+
+		if self.rev_str:
+			x = self.map(str_ch, self.sbus_min, self.sbus_max, 100.0, -100.0)
+		else:
+			x = self.map(str_ch, self.sbus_min, self.sbus_max, -100.0, 100.0)
 
 		left = y+x
 		right = y-x
@@ -104,10 +114,10 @@ class JMOAB_PWMCart:
 			right = right + abs(diff)
 
 
-		if self.prev_Y < 0.0:
-			swap = left
-			left = right
-			right = swap
+		# if (self.prev_Y < 0.0):
+		# 	swap = left
+		# 	left = right
+		# 	right = swap
 
 		self.prev_Y = y
 
@@ -139,14 +149,23 @@ class JMOAB_PWMCart:
 				self.cmd_steering = 1024
 				self.cmd_throttle = 1024
 			else:
-				left_pwm, right_pwm = self.channel_mixing(self.cmd_steering, self.cmd_throttle)
-				mode = "AUTO"
+				if ((time.time() - self.callback_timestamp) > self.callback_timeout):
+					mode = "AUTO"
+					left_pwm = 1520
+					right_pwm = 1520
+				else:
+					left_pwm, right_pwm = self.channel_mixing(self.cmd_steering, self.cmd_throttle)
+					mode = "AUTO"
 
 			self.send_pwm_leftright(left_pwm, right_pwm)
 
 
-			print("mode: {:} | sbus_str: {:d} | sbus_thr: {:d} | pwm_left: {:d} | pwm_right: {:d}".format(\
-				mode, sbus_ch_array[0], sbus_ch_array[1], left_pwm, right_pwm))
+			if mode != "AUTO":
+				print("mode: {:} | sbus_str: {:d} | sbus_thr: {:d} | pwm_left: {:d} | pwm_right: {:d}".format(\
+					mode, sbus_ch_array[0], sbus_ch_array[1], left_pwm, right_pwm))
+			else:
+				print("mode: {:} | sbus_str: {:d} | sbus_thr: {:d} | pwm_left: {:d} | pwm_right: {:d}".format(\
+					mode, self.cmd_steering, self.cmd_throttle, left_pwm, right_pwm))
 
 			## if there is no sbus command until callback_timeout
 			## then set back to neutral for all 
