@@ -1,15 +1,16 @@
 #! /usr/bin/env python
 import rospy
 from smbus2 import SMBus
-from std_msgs.msg import Int32MultiArray, Int8
+from std_msgs.msg import Int32MultiArray, Int8, Float32MultiArray
+from ZLAC8015D import *
 import time
 
-class JMOAB_PWMCart:
+class JMOAB_ZLAC8015D:
 
 	def __init__(self):
 
-		rospy.init_node('jmoab_ros_atcart_node', anonymous=True)
-		rospy.loginfo("Start JMOAB-ROS-PWMCart node")
+		rospy.init_node('jmoab_ros_ZLAC8015D_node', anonymous=True)
+		rospy.loginfo("Start JMOAB-ROS-ZLAC8015D node")
 
 		self.bus = SMBus(1)
 
@@ -18,6 +19,11 @@ class JMOAB_PWMCart:
 
 		self.atcart_mode_pub = rospy.Publisher("/atcart_mode", Int8, queue_size=10)
 		self.atcart_mode = Int8()
+
+		self.wheels_rpm_pub = rospy.Publisher("/wheels_rpm", Float32MultiArray, queue_size=10)
+		time.sleep(1)
+		self.wheels_rpm_msg = Float32MultiArray()
+
 
 		rospy.Subscriber("/sbus_cmd", Int32MultiArray, self.sbus_cmd_callback)
 		rospy.Subscriber("/atcart_mode_cmd", Int8, self.cart_mode_callack)
@@ -41,7 +47,7 @@ class JMOAB_PWMCart:
 		self.callback_timeout = 1.0 # second
 		self.callback_timestamp = time.time()
 
-		self.rev_str = True #False
+		self.rev_str = False #False
 		self.rev_thr = True
 
 		#### JMOAB I2C REG ####
@@ -51,32 +57,29 @@ class JMOAB_PWMCart:
 		self.mode = "AUTO"
 		self.mode_num = 2
 
+		### ZLAC8015D Init ###
+		self.zlc = ZLAC8015D()
+		self.zlc.disable_motor()
+		self.zlc.set_accel_time(200,200)
+		self.zlc.set_decel_time(200,200)
+		self.zlc.set_mode(3)
+		self.zlc.enable_motor()
+
+		self.max_rpm = 150
+		self.ultimate_rpm = 200 
+		self.deadband_rpm = 3
 
 		rospy.loginfo("Publishing SBUS RC channel on /sbus_rc_ch topic")
 		rospy.loginfo("Subscribing on /sbus_cmd topic for steering and throttle values")
 		rospy.loginfo("Publishing ATCart mode on /atcart_mode topic")
 		rospy.loginfo("Subscribing on /atcart_mode_cmd topic for mode changing")
 
+		rospy.loginfo("Publishing wheels rpm on /wheels_rpm topic")
+
 		self.loop()
 
 		rospy.spin()
 
-	# def bypass_sbus_failsafe(self):
-	# 	## Disable SBUS Failsafe
-	# 	self.bus.write_byte_data(0x71, self.SBUS_FS_REG, 0x01)
-	# 	time.sleep(0.1)
-
-	# 	## Set back to hold mode
-	# 	self.write_atcart_mode(0x00)
-	# 	time.sleep(0.1)
-
-	# 	## Set back to auto mode
-	# 	self.write_atcart_mode(0x02)
-	# 	time.sleep(0.1)
-	# 	self.write_atcart_mode(0x02)
-	# 	time.sleep(0.1)
-	# 	self.write_atcart_mode(0x02)
-	# 	time.sleep(0.1)
 
 	def write_atcart_mode(self, mode_num):
 		## need to write multiple times to take effect
@@ -99,18 +102,6 @@ class JMOAB_PWMCart:
 
 	def cart_mode_callack(self, msg):
 		self.write_atcart_mode(msg.data)
-		# if msg.data == 0:
-		# 	self.mode = "HOLD"
-		# 	self.mode_num = 0
-		# elif msg.data == 1:
-		# 	self.mode = "MANUAL"
-		# 	self.mode_num = 1
-		# elif msg.data == 2:
-		# 	self.mode = "AUTO"
-		# 	self.mode_num = 2
-		# else:
-		# 	self.mode = "UNKNOWN"
-		# 	self.mode_num = 3
 
 	def pwm2word(self, pwm_val):
 
@@ -177,17 +168,17 @@ class JMOAB_PWMCart:
 			right = right + abs(diff)
 
 
-		# if (self.prev_Y < 0.0):
-		# 	swap = left
-		# 	left = right
-		# 	right = swap
+		if (self.prev_Y < 0.0):
+			swap = left
+			left = right
+			right = swap
 
 		self.prev_Y = y
 
-		left_pwm = self.map(left, -200.0, 200.0, self.pwm_min, self.pwm_max)
-		right_pwm = self.map(right, -200.0, 200.0, self.pwm_min, self.pwm_max)
+		left_rpm = self.map(left, -200.0, 200.0, self.max_rpm, -self.max_rpm)
+		right_rpm = self.map(right, -200.0, 200.0, -self.max_rpm, self.max_rpm)
 
-		return int(left_pwm), int(right_pwm)
+		return int(left_rpm), int(right_rpm)
 
 
 	def loop(self):
@@ -195,81 +186,95 @@ class JMOAB_PWMCart:
 		rate = rospy.Rate(20) # 10hz
 		prev_ch5 = 1024
 		propo_mode_changed = False
+		left_rpm = 0
+		right_rpm = 0
 
 		while not rospy.is_shutdown():
 
 			sbus_ch_array = self.get_sbus_channel()
 
-			if (140 < sbus_ch_array[4] < 1950) and (140 < sbus_ch_array[6] < 1950):
+			# if (140 < sbus_ch_array[4] < 1950) and (140 < sbus_ch_array[6] < 1950):
 
-				self.sbus_ch.data = sbus_ch_array
-				self.sbus_ch_pub.publish(self.sbus_ch)
+			self.sbus_ch.data = sbus_ch_array
+			self.sbus_ch_pub.publish(self.sbus_ch)
 
-				if prev_ch5 != sbus_ch_array[4]:
-					propo_mode_changed = True
-				else:
-					propo_mode_changed = False
+			if prev_ch5 != sbus_ch_array[4]:
+				propo_mode_changed = True
+			else:
+				propo_mode_changed = False
 
-				# if sbus_ch_array[4] > 1500 or ((self.mode == "AUTO") and not propo_mode_changed):
-				if self.mode_num == 2:
-					if ((time.time() - self.callback_timestamp) > self.callback_timeout):
-						left_pwm = 1520
-						right_pwm = 1520
-						self.cmd_steering = 1024
-						self.cmd_throttle = 1024
-					else:
-						left_pwm, right_pwm = self.channel_mixing(self.cmd_steering, self.cmd_throttle)
-						
-					self.mode_num = 2
-					self.mode = "AUTO"
-
-				elif self.mode_num == 1:
-				# elif sbus_ch_array[4] < 1500:
-					left_pwm, right_pwm = self.channel_mixing(sbus_ch_array[0], sbus_ch_array[1])
-					self.mode = "MANUAL"
+			# if sbus_ch_array[4] > 1500 or ((self.mode == "AUTO") and not propo_mode_changed):
+			if self.mode_num == 2:
+				if ((time.time() - self.callback_timestamp) > self.callback_timeout):
+					left_rpm = 0
+					right_rpm = 0
 					self.cmd_steering = 1024
 					self.cmd_throttle = 1024
-					self.mode_num = 1
-
-				elif self.mode_num == 0:
-				# elif sbus_ch_array[4] < 700 or ((self.mode == "HOLD") and not propo_mode_changed):
-					left_pwm = self.pwm_mid
-					right_pwm = self.pwm_mid
-					self.cmd_steering = 1024
-					self.cmd_throttle = 1024
-					self.mode = "HOLD"
-					self.mode_num = 0
-
 				else:
-					self.mode = "UNKNOWN"
-					left_pwm = 1520
-					right_pwm = 1520
-					self.cmd_steering = 1024
-					self.cmd_throttle = 1024
-					self.mode_num = 3
+					left_rpm, right_rpm = self.channel_mixing(self.cmd_steering, self.cmd_throttle)
+					
+				self.mode_num = 2
+				self.mode = "AUTO"
 
-				## Set limit for safety
-				if (900 < right_pwm < 2100) and (900 < right_pwm < 2100): 
-					self.send_pwm_leftright(left_pwm, right_pwm)
+			elif self.mode_num == 1:
+			# elif sbus_ch_array[4] < 1500:
+				left_rpm, right_rpm = self.channel_mixing(sbus_ch_array[0], sbus_ch_array[1])
+				self.mode = "MANUAL"
+				self.cmd_steering = 1024
+				self.cmd_throttle = 1024
+				self.mode_num = 1
+
+			elif self.mode_num == 0:
+			# elif sbus_ch_array[4] < 700 or ((self.mode == "HOLD") and not propo_mode_changed):
+				left_rpm = 0
+				right_rpm = 0
+				self.cmd_steering = 1024
+				self.cmd_throttle = 1024
+				self.mode = "HOLD"
+				self.mode_num = 0
+
+			else:
+				self.mode = "UNKNOWN"
+				left_rpm = 0
+				right_rpm = 0
+				self.cmd_steering = 1024
+				self.cmd_throttle = 1024
+				self.mode_num = 3
+
+			## Set limit for safety
+			if (-self.ultimate_rpm < left_rpm < self.ultimate_rpm) and (-self.ultimate_rpm < right_rpm < self.ultimate_rpm): 
+				# print(left_rpm, right_rpm)
+				if (-self.deadband_rpm < left_rpm < self.deadband_rpm): 
+					left_rpm = 0
+
+				if (-self.deadband_rpm < right_rpm < self.deadband_rpm): 
+					right_rpm = 0
+
+				self.zlc.set_rpm(int(left_rpm), int(right_rpm))
+
+			fb_L_rpm, fb_R_rpm = self.zlc.get_rpm()
+			# print(fb_L_rpm, fb_R_rpm)
+			self.wheels_rpm_msg.data = [fb_L_rpm, fb_R_rpm]
+			self.wheels_rpm_pub.publish(self.wheels_rpm_msg)
 
 
-				## Logging to screen
-				if self.mode != "AUTO":
-					print("mode: {:} | mode_num: {:d} | sbus_str: {:d} | sbus_thr: {:d} | pwm_left: {:d} | pwm_right: {:d}".format(\
-						self.mode, self.mode_num, sbus_ch_array[0], sbus_ch_array[1], left_pwm, right_pwm))
-				else:
-					print("mode: {:} | mode_num: {:d} | sbus_str: {:d} | sbus_thr: {:d} | pwm_left: {:d} | pwm_right: {:d}".format(\
-						self.mode, self.mode_num, self.cmd_steering, self.cmd_throttle, left_pwm, right_pwm))
+			## Logging to screen
+			if self.mode != "AUTO":
+				print("mode: {:} | mode_num: {:d} | sbus_str: {:d} | sbus_thr: {:d} | left_rpm: {:d} | right_rpm: {:d}".format(\
+					self.mode, self.mode_num, sbus_ch_array[0], sbus_ch_array[1], left_rpm, right_rpm))
+			else:
+				print("mode: {:} | mode_num: {:d} | sbus_str: {:d} | sbus_thr: {:d} | left_rpm: {:d} | right_rpm: {:d}".format(\
+					self.mode, self.mode_num, self.cmd_steering, self.cmd_throttle, left_rpm, right_rpm))
 
 
-				self.atcart_mode.data =  self.read_atcart_mode() #self.mode_num
-				self.atcart_mode_pub.publish(self.atcart_mode)
+			self.atcart_mode.data =  self.read_atcart_mode() #self.mode_num
+			self.atcart_mode_pub.publish(self.atcart_mode)
 
-				prev_ch5 = sbus_ch_array[4]
+			prev_ch5 = sbus_ch_array[4]
 
 
 			rate.sleep()
 
 
 if __name__ == '__main__':
-	jmoab = JMOAB_PWMCart()
+	jmoab = JMOAB_ZLAC8015D()
