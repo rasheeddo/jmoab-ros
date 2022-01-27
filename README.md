@@ -54,6 +54,31 @@ Check more detail on example scripts
 - `rosrun jmoab-ros sbus_ch_listener.py` for test reading sbus channel on a script
 - `rosrun jmoab-ros sbus_cmd_sender.py` for test writing a command steering and throttle from a script
 
+#### UPDATE
+
+`jmoab-ros-atcart.py` works only with the firmwares of
+
+- v07_20210614_AT_JMOAB01&03.hex
+
+- v07a_20210728_AT_JMOAB01&03.hex
+
+- v07e_20210805_AT_JMOAB01&03_SBUSOUT.hex
+
+For a better stability in autonomous navigation, I highly recommend to use the firmwares of 
+
+- 20220117_AT_JMOAB01_fw_v07.2b_skidsteer.hex 
+
+or 
+
+- 20220117_AT_JMOAB05_fw_v07.2b_skidsteer.hex
+
+Please check all of the firmwares [here](./firmwares/)
+
+This `_skidsteer` version has more evenly controlable in both wheels, because it's non-mixing mode, so we could control each wheel individually. So during steering or skidding, the cart has more precise control.
+
+Please use `jmoab-ros-atcart-diff-drive.py` for both firmwares above. This script has done the mixing mode inside, so we could still publish the same topic as `/sbus_cmd` for [steering, throttle] but the result is much better than default mixing by PSoc controller.
+
+
 ### Using wheel's hall effect sensor for odometer
 
 The ATCart wheel itself doesn't give a feedback of anything, in order to get RPM of the wheel we need to install extra sensor attaching on the wheel. Please check the detail on [here](docs/wheels_hall_sensor.md).
@@ -78,6 +103,14 @@ We can visualize the imu topic by using rviz_imu_plugin (install from here http:
 
 ### Run as compass mode
 To run BNO055 as compass mode on JMOAB, we need to calibrate the sensor offset first, please check on the step on this [link.](example/compass_calibration_step.md)
+
+Once the compass is calibrated, the sensor offsets are saved into `calibration_offset.txt` at `example/` directory. So when you run `jmoab-ros-compass.py` it would load that automatically.
+
+Depends on how you place BNO055 board on the cart, you will face that there is some "heading_offset" when you move the cart even as straight line, but the heading is pointing to other direction. 
+
+To solve that heading offset issue, if your GPS can get RTK-Fixed status, I have added the "Kalman filter" to estimate the heading offset during the operation. So you will need to move the cart in manual mode as straight line as much as possible, find some good flat ground to run the bot in manual mode for this process. The Kalman filter is trying to estimate the true offset by using the bearing angle of two consequential GPS points, that why you need to get RTK-Fixed status to be able to use this. After a while of running in straight line you will notice that the bot's heading kept adjusted to the correct heading by itself. This estimation process could be done during auto mode as well, but it will do the estimation only when there is no steering motion.
+
+Please check on [this video](https://youtu.be/MqF1ztsyBPM) for more explanation of this algorithms.
 
 
 ## JMOAB with ADC
@@ -137,12 +170,12 @@ uart1:
 config_on_startup: false
 
 publish:
-        all: false
-        nav:
-                all: true
-                relposned: true
-                posllh: true
-                posecef: true
+  all: false
+  nav:
+    all: true
+    relposned: true
+    posllh: true
+    posecef: true
 ```
 
 Make sure you choose the correct baudrate according to your F9P Uart setup. If you don't know what is the baudrate of F9P's UART, you will need to check it with u-center software.
@@ -179,15 +212,60 @@ You will get str2str binary file at `RTKLIB/app/consapp/str2str/gcc/`, so before
 
 To run RTKLIB, you need to plub USB cable from F9P's USB to Jetson, it should be recognized as `/dev/ttyACM0` or something similar, then we could run the str2str binary as,
 
-	`./str2str -in ntrip://rtk2go.com:2101/InohanaKobo -out serial://ttyACM0:115200 -b 1`
+	./str2str -in ntrip://rtk2go.com:2101/InohanaKobo -out serial://ttyACM0:115200 -b 1
 
 You must change your base station place according to where the closet to your place, in my case it's `InohanaKobo`.
+
+## JMOAB with Two F9P GPS for better a heading!
+
+One GPS and one BNO055 could be enough to run waypoints autonomous driving, but two GPS with one BNO055 is the best!
+
+The second GPS could be placed at the front of the cart to use as the reference point for heading offset calculation. 
+
+Previously, on one GPS and one compass setup, we have to run the bot in manual to get enough data to let the Kalman filter estimates the correct heading offset. But with 2nd GPS on front, we could have a better heading offset estimated once we started `jmoab-ros-compass-2gps.py` just in few seconds. So two GPS must have RTK-Fixed status, and the heading estimation will be done when the cart is moving as straight line or even at stationary.
+
+Because there is only one UART on Jetson 40pins header, so we neeed to use USB port for the 2nd GPS. Please check on the wiring below.
+
+![](images/two_gps_wiring.png)
+
+Then we need to make a copy of `zed_f9p.yaml` file of ublox_gps node, I make the new one name as `zed_f9p_2.yaml`. The content inside is mostly the same except we need to change the device as
+
+```
+device: /dev/ttyUSB0
+frame_id: gps
+uart1:
+  baudrate: 115200
+config_on_startup: false
+
+publish:
+  all: false
+  nav:
+    all: true
+    relposned: true
+    posllh: true
+    posecef: true
+```
+
+To run two ublox GPS with the same launch file, please using two terminals with these two commands
+
+	roslaunch ublox_gps ublox_device.launch node_name:=ublox param_file_name:=zed_f9p
+
+	roslaunch ublox_gps ublox_device.launch node_name:=ublox2 param_file_name:=zed_f9p_2
+
+Your 1st GPS will have the namespace as `/ublox/` and the 2nd GPS will have `/ublox2/`. 
+
+The USB port of F9P GPS when plugging on Jetson would be recognized as `/dev/ttyACMx`. In case of two GPS, you will have `/dev/ttyACM0` for GPS1 and `/dev/ttyACM1` for GPS2. We will need to use RTKLIB to get RTK-Fixed status for both ports.
+
+	./str2str -in ntrip://rtk2go.com:2101/InohanaKobo -out serial://ttyACM0:115200 -b 1
+
+	./str2str -in ntrip://rtk2go.com:2101/InohanaKobo -out serial://ttyACM1:115200 -b 1
+
 
 ## JMOAB with DJI Ronin-SC control
 
 DJI Ronin-SC handheld camera stabilizer is DSLR camera gimbal. It could be remotely operated by RC transmitter with SBUS signal. For more detail how, please check on this [video](https://www.youtube.com/watch?v=fCnYqv7fR_c&ab_channel=Mad%27sTech). 
 
-In order to let the Jetson control the gimbal, we need to use a special JMOAB firmware (v07e_20210805_AT_JMOAB01&03_SBUSOUT.hex) which able to control ATCart wheels and also SBUS output on SBUS3 port.
+In order to let the Jetson control the gimbal, we need to use a special JMOAB firmware (v07e_20210805_AT_JMOAB01&03_SBUSOUT.hex) which able to control ATCart wheels and also SBUS output on SBUS3 port. It could be found [here](./firmwares/)
 
 We need to use `jmoab-ros-atcart-gimbal.py` to control the cart and gimbal.
 

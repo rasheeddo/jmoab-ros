@@ -1,0 +1,17 @@
+v07_20210614_AT_JMOAB01&03.hex
+- auto-mode could be changed from Jetson
+- no delay in mixing mode
+- disable sbus failsafe by i2c reg
+- work with 01 and 03 board
+
+v07a_20210728_AT_JMOAB01&03.hex
+- small changed
+
+v07e_20210805_AT_JMOAB01&03_SBUSOUT.hex
+- SBUS output on PWM3 port
+
+20220117_AT_JMOAB01_fw_v07.2b_skidsteer.hex
+- control individual wheel from previous steering,throttle registers as left,right
+
+20220117_AT_JMOAB05_fw_v07.2b_skidsteer.hex
+- control individual wheel from previous steering,throttle registers as left,right for JMOAB05
