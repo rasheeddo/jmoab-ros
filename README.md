@@ -80,7 +80,7 @@ Check more detail on example scripts
 - `rosrun jmoab-ros sbus_ch_listener.py` for test reading sbus channel on a script
 - `rosrun jmoab-ros sbus_cmd_sender.py` for test writing a command steering and throttle from a script
 
-***Note***
+#### Remarks 
 
 `jmoab-ros-atcart.py` works only with the firmwares of
 
@@ -104,7 +104,7 @@ This `_skidsteer` version has more evenly controlable in both wheels, because it
 
 Please use `jmoab-ros-atcart-diff-drive.py` for both firmwares above. This script has done the mixing mode inside, so we could still publish the same topic as `/sbus_cmd` for [steering, throttle] but the result is much better than default mixing by PSoc controller.
 
-***Note2***
+#### Remarks 2
 
 With the new batch of ATCart's ESC with model name of "MN1 WSDC/3+7F&G-X"
 
