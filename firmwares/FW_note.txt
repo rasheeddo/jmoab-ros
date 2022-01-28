@@ -15,3 +15,8 @@ v07e_20210805_AT_JMOAB01&03_SBUSOUT.hex
 
 20220117_AT_JMOAB05_fw_v07.2b_skidsteer.hex
 - control individual wheel from previous steering,throttle registers as left,right for JMOAB05
+
+20220127_AT_JMOAB01_fw_v08.2_skidsteer_newESC_steer_REV.hex
+20220127_AT_JMOAB04_fw_v08.2_skidsteer_newESC_steer_REV.hex
+20220127_AT_JMOAB05_fw_v08.2_skidsteer_newESC_steer_REV.hex
+- for new batch ESC with the model name of MN1 WSDC/3+7F&G-X

@@ -27,6 +27,32 @@ Source environment
 - `source ~/.bashrc` 
 - `source ~/catkin/devel/setup.bash`
 
+## Update JMOAB firmware
+
+All of available firmware are in [firmwares](./firmwares/) directory.
+
+To flash the firmware, please follow the step below, (must use Windows PC)
+
+- first you will need to have Mini Prog3 [programmer](https://www.digikey.com/catalog/en/partgroup/psoc-miniprog3-programmer-debugger-cy8ckit-002/20080).
+
+- Download PSocC Programmer [software](https://www.infineon.com/cms/en/design-support/tools/programming-testing/psoc-programming-solutions/?utm_source=cypress&utm_medium=referral&utm_campaign=202110_globe_en_all_integration-product_families#!downloads).
+
+- Open the PSoC Programmer, it will shown as here
+
+![](images/open_programmer.jpeg)
+
+- Keep eyes on lower right corner, so it should show 3 green as PASS, POWERED, Connected. So you should plug the Mini Prog3 to the JMOAB J4 header for AT_JMOAB01 board or J2 header for other higher version. Make sure that the VTARG pin of the programmer is on the correct pin header on JMOAB. And also please power on the Jetson as well.
+
+![](images/flash_firmware.jpeg)
+
+- Once you saw all three greens status, the select which firmware you would like to use, and click on Program button right next to Open button.
+
+- If it's success, you will see the it's showing successful message.
+
+![](images/flash_success.jpeg)
+
+- You will need to power off and on the Jetson again to take affect of new firmware on JMOAB.
+
 ## JMOAB with all nodes
 
 `roslaunch jmoab-ros jmoab-ros.alunch` will run all the nodes that have implemented.
@@ -54,7 +80,7 @@ Check more detail on example scripts
 - `rosrun jmoab-ros sbus_ch_listener.py` for test reading sbus channel on a script
 - `rosrun jmoab-ros sbus_cmd_sender.py` for test writing a command steering and throttle from a script
 
-#### UPDATE
+***Note***
 
 `jmoab-ros-atcart.py` works only with the firmwares of
 
@@ -77,6 +103,24 @@ Please check all of the firmwares [here](./firmwares/)
 This `_skidsteer` version has more evenly controlable in both wheels, because it's non-mixing mode, so we could control each wheel individually. So during steering or skidding, the cart has more precise control.
 
 Please use `jmoab-ros-atcart-diff-drive.py` for both firmwares above. This script has done the mixing mode inside, so we could still publish the same topic as `/sbus_cmd` for [steering, throttle] but the result is much better than default mixing by PSoc controller.
+
+***Note2***
+
+With the new batch of ATCart's ESC with model name of "MN1 WSDC/3+7F&G-X"
+
+![](images/new_batch_esc_SN.jpeg)
+
+![](images/new_batch_joystick.jpeg)
+
+The supplier has changed some handshake package and data ranges, please check the detail on [this repo](https://github.com/rasheeddo/BrushlessDriveWheels/tree/new-batch-esc#hack-new-batch-esc). So we need to upgrade the new firmware too, to be able to use with this new batch ESC. The firmware of new ESC is as following
+
+- 20220127_AT_JMOAB01_fw_v08.2_skidsteer_newESC_steer_REV.hex
+
+- 20220127_AT_JMOAB04_fw_v08.2_skidsteer_newESC_steer_REV.hex
+
+- 20220127_AT_JMOAB05_fw_v08.2_skidsteer_newESC_steer_REV.hex
+
+Those three firmware has the same function, but only the hardware of the JMOAB version is different.
 
 
 ### Using wheel's hall effect sensor for odometer
