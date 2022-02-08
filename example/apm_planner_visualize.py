@@ -14,7 +14,7 @@ python_version = sys.version_info[0]
 
 class APM(object):
 
-	def __init__ (self, IP, mission_dir):
+	def __init__ (self, IP, mission_dir, ID):
 		rospy.init_node('apm_planner_node', anonymous=True)
 		rospy.Subscriber("/ublox/fix", NavSatFix, self.gps_callback)
 		rospy.Subscriber("/jmoab_compass", Float32MultiArray, self.compass_callback)
@@ -79,7 +79,7 @@ class APM(object):
 
 
 		mavutil.set_dialect("ardupilotmega")
-		self.master = mavutil.mavlink_connection('udpout:{:}:14550'.format(IP), source_system=1, source_component=1)
+		self.master = mavutil.mavlink_connection('udpout:{:}:14550'.format(IP), source_system=ID, source_component=1)
 		'''
 		To make autopilot script and GCS communicate as two ways
 		we need to add this 
@@ -597,6 +597,8 @@ if __name__ == "__main__":
 						help="This is your computer IP for APM Planner")
 	parser.add_argument('--mission_dir',
 						help="This is where you would like to store mission.txt file")
+	parser.add_argument('--id',
+						help="ID of rover on APMPlanner")
 
 	args = parser.parse_args()
 	ip = args.ip
@@ -611,5 +613,11 @@ if __name__ == "__main__":
 		print("Use jmoab-ros/example as the directory")
 		mission_dir = os.path.join(os.getcwd(),"mission.txt")
 
-	apm_planner = APM(ip, mission_dir)
+	if args.id is None:
+		print("Use id 1 as default")
+		_id = 1
+	else:
+		_id = int(args.id)
+
+	apm_planner = APM(ip, mission_dir, _id)
 	# apm_planner = APM(ip)

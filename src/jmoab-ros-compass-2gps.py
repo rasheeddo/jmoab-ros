@@ -186,8 +186,8 @@ class JMOAB_COMPASS_2GPS:
 		## so we could get the real difference between current and previous data ##
 		###########################################################################
 		if self.do_estimation:
-			self.brg = self.get_bearing(self.prev_lat, self.prev_lon, self.lat, self.lon)
-			self.brg = self.ConvertTo360Range(self.brg)
+			# self.brg = self.get_bearing(self.prev_lat, self.prev_lon, self.lat, self.lon)
+			# self.brg = self.ConvertTo360Range(self.brg)
 
 			if self.cart_mode == 1:
 
@@ -449,7 +449,6 @@ class JMOAB_COMPASS_2GPS:
 					###############################################################
 					if (1000 < self.sbus_throttle_stick) and (924 < self.sbus_steering_stick < 1124):
 						
-						self.last_time_calculate = time.time()
 						self.do_estimation = True
 
 					else:
@@ -466,7 +465,6 @@ class JMOAB_COMPASS_2GPS:
 					#######################################################
 					if (1000 < self.sbus_cmd_throttle) and (970 < self.sbus_cmd_steering < 1074):
 
-						self.last_time_calculate = time.time()
 						self.do_estimation = True
 
 					else:
