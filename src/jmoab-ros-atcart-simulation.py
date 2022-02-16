@@ -6,25 +6,15 @@ from geometry_msgs.msg import Twist
 from std_msgs.msg import Int32MultiArray, Float32MultiArray, Int8
 from sensor_msgs.msg import Joy
 import time
+import argparse
 
-class ATCartSim:
+class ATCartSim(object):
 
-	def __init__(self):
+	def __init__(self, NS):
 
 		rospy.init_node('jmoab_ros_vel_2_sbus', anonymous=True)
 		rospy.loginfo("Start JMOAB-ROS ATCart Simulation node")
 		rospy.loginfo("Please run 'rosrun joy joy_node' as a transmitter device")
-
-
-		rospy.Subscriber("/sbus_cmd", Int32MultiArray, self.sbus_cmd_callback)
-		rospy.Subscriber("joy", Joy, self.joy_callback)
-		rospy.Subscriber("/atcart_mode_cmd", Int8, self.cart_mode_callack)
-
-		self.cmd_vel_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
-		self.cmd_vel = Twist()
-
-		self.atcart_mode_pub = rospy.Publisher("/atcart_mode", Int8, queue_size=10)
-		self.atcart_mode = Int8()
 
 		self.cmd_steering = 1024
 		self.cmd_throttle = 1024
@@ -51,6 +41,34 @@ class ATCartSim:
 		## -143	 RPM -->  368
 		## 4.5   RPM -->  1100
 		## 143   RPM -->  1680
+
+		if NS is None:
+			cmd_vel_topic = "/cmd_vel"
+			atcart_mode_topic = "/atcart_mode"
+			sbus_cmd_topic = "/sbus_cmd"
+			atcart_mode_cmd_topic = "/atcart_mode_cmd"
+		else:
+			if NS.startswith("/"):
+				cmd_vel_topic = NS + "/cmd_vel"
+				atcart_mode_topic = NS + "/atcart_mode"
+				sbus_cmd_topic = NS + "/sbus_cmd"
+				atcart_mode_cmd_topic = NS + "/atcart_mode_cmd"
+			else:
+				cmd_vel_topic = "/" + NS + "/cmd_vel"
+				atcart_mode_topic = "/" + NS + "/atcart_mode"
+				sbus_cmd_topic = "/" + NS + "/sbus_cmd"
+				atcart_mode_cmd_topic = "/" + NS + "/atcart_mode_cmd"
+
+		self.cmd_vel_pub = rospy.Publisher(cmd_vel_topic, Twist, queue_size=10)
+		self.cmd_vel = Twist()
+
+		self.atcart_mode_pub = rospy.Publisher(atcart_mode_topic, Int8, queue_size=10)
+		self.atcart_mode = Int8()
+
+		rospy.Subscriber(sbus_cmd_topic, Int32MultiArray, self.sbus_cmd_callback)
+		rospy.Subscriber(atcart_mode_cmd_topic, Int8, self.cart_mode_callack)
+		rospy.Subscriber("joy", Joy, self.joy_callback)
+		
 
 
 		self.loop()
@@ -164,4 +182,16 @@ class ATCartSim:
 
 if __name__ == "__main__":
 
-	s = ATCartSim()
+	parser = argparse.ArgumentParser(description='ATCart sim for jmoab-ros')
+	parser.add_argument('--ns',
+						help="a namespace in front of topics")
+
+	args = parser.parse_args(rospy.myargv()[1:])	# to make it work on launch file
+	ns = args.ns
+
+	if ns is not None:
+		print("Use namespace as {:}".format(ns))
+	else:
+		print("No namespace, using default")
+
+	s = ATCartSim(ns)

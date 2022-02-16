@@ -57,26 +57,28 @@ class JMOAB_PWMCart:
 		rospy.loginfo("Publishing ATCart mode on /atcart_mode topic")
 		rospy.loginfo("Subscribing on /atcart_mode_cmd topic for mode changing")
 
+		self.bypass_sbus_failsafe()
+		
 		self.loop()
 
 		rospy.spin()
 
-	# def bypass_sbus_failsafe(self):
-	# 	## Disable SBUS Failsafe
-	# 	self.bus.write_byte_data(0x71, self.SBUS_FS_REG, 0x01)
-	# 	time.sleep(0.1)
+	def bypass_sbus_failsafe(self):
+		## Disable SBUS Failsafe
+		self.bus.write_byte_data(0x71, self.SBUS_FS_REG, 0x01)
+		time.sleep(0.1)
 
-	# 	## Set back to hold mode
-	# 	self.write_atcart_mode(0x00)
-	# 	time.sleep(0.1)
+		## Set back to hold mode
+		self.write_atcart_mode(0x00)
+		time.sleep(0.1)
 
-	# 	## Set back to auto mode
-	# 	self.write_atcart_mode(0x02)
-	# 	time.sleep(0.1)
-	# 	self.write_atcart_mode(0x02)
-	# 	time.sleep(0.1)
-	# 	self.write_atcart_mode(0x02)
-	# 	time.sleep(0.1)
+		## Set back to auto mode
+		self.write_atcart_mode(0x02)
+		time.sleep(0.1)
+		self.write_atcart_mode(0x02)
+		time.sleep(0.1)
+		self.write_atcart_mode(0x02)
+		time.sleep(0.1)
 
 	def write_atcart_mode(self, mode_num):
 		## need to write multiple times to take effect

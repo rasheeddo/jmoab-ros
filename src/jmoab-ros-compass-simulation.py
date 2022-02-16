@@ -7,10 +7,11 @@ import numpy as np
 from sensor_msgs.msg import Joy
 from geometry_msgs.msg import TwistWithCovarianceStamped
 import time
+import argparse
 
-class Imu2Compass:
+class Imu2Compass(object):
 
-	def __init__(self):
+	def __init__(self, NS):
 
 		rospy.init_node('jmoab_ros_imu_to_compass', anonymous=True)
 		rospy.loginfo("Start JMOAB-ROS-IMU_COMPASS node")
@@ -45,10 +46,6 @@ class Imu2Compass:
 		self.sbus_cmd_throttle = 1024
 		self.sbus_cmd_steering = 1024
 
-		self.vel_x = 0.0
-		self.vel_y = 0.0
-		self.vel_norm = 0.0
-
 		self.pure_hdg = 0.0
 		self.sign = 1.0
 		self.brg = 0.0
@@ -62,25 +59,47 @@ class Imu2Compass:
 		self.state_predict = self.hdg_off_est
 		self.error_est = 10.0 
 		self.error_mea = 8.0 # a variance of 
-
-
-		rospy.Subscriber("/imu", Imu, self.imu_callback)
 		
-		self.compass_pub = rospy.Publisher('/jmoab_compass', Float32MultiArray, queue_size=10)
-		self.compass_msg = Float32MultiArray()
-		self.hdg_calib_flag_pub = rospy.Publisher("/hdg_calib_flag", Bool, queue_size=10)
-		self.hdg_calib_flag_msg = Bool()
+		
+		# self.hdg_calib_flag_pub = rospy.Publisher("/hdg_calib_flag", Bool, queue_size=10)
+		# self.hdg_calib_flag_msg = Bool()
 		# self.sbus_cmd_pub = rospy.Publisher("/sbus_cmd", Int32MultiArray, queue_size=10)
 		# self.sbus_cmd = Int32MultiArray()
-		self.atcart_mode_cmd_pub = rospy.Publisher("/atcart_mode_cmd", Int8, queue_size=10)
-		self.atcart_mode_cmd_msg = Int8()
+		# self.atcart_mode_cmd_pub = rospy.Publisher("/atcart_mode_cmd", Int8, queue_size=10)
+		# self.atcart_mode_cmd_msg = Int8()
 
-		rospy.Subscriber("/ublox/fix", NavSatFix, self.gps_callback)
-		rospy.Subscriber("/atcart_mode", Int8, self.atcart_mode_callback)
+		if NS is None:
+			gps_topic = "/ublox/fix"
+			compass_topic = "/jmoab_compass"
+			imu_topic = "/imu"
+			sbus_cmd_topic = "/sbus_cmd"
+			atcart_mode_topic = "/atcart_mode"
+			jmoab_compass_topic = "/jmoab_compass"
+		else:
+			if NS.startswith("/"):
+				gps_topic = NS + "/ublox/fix"
+				compass_topic = NS + "/jmoab_compass"
+				imu_topic = NS + "/imu"
+				sbus_cmd_topic = NS + "/sbus_cmd"
+				atcart_mode_topic = NS + "/atcart_mode"
+				jmoab_compass_topic = NS + "/jmoab_compass"
+			else:
+				gps_topic = "/" + NS + "/ublox/fix"
+				compass_topic = "/" + NS + "/jmoab_compass"
+				imu_topic = "/" + NS + "/imu"
+				sbus_cmd_topic = "/" + NS + "/sbus_cmd"
+				atcart_mode_topic = "/" + NS + "/atcart_mode"
+				jmoab_compass_topic = "/" + NS + "/jmoab_compass"
+
+
+		rospy.Subscriber(imu_topic, Imu, self.imu_callback)
+		rospy.Subscriber(gps_topic, NavSatFix, self.gps_callback)
+		rospy.Subscriber(atcart_mode_topic, Int8, self.atcart_mode_callback)
+		rospy.Subscriber(sbus_cmd_topic, Int32MultiArray, self.sbus_cmd_callback)
 		rospy.Subscriber("joy", Joy, self.joy_callback)
 
-		rospy.Subscriber("/sbus_cmd", Int32MultiArray, self.sbus_cmd_callback)
-		rospy.Subscriber("/ublox/fix_velocity", TwistWithCovarianceStamped, self.fix_vel_callback)
+		self.compass_pub = rospy.Publisher(jmoab_compass_topic, Float32MultiArray, queue_size=10)
+		self.compass_msg = Float32MultiArray()
 
 		self.loop()
 
@@ -180,12 +199,6 @@ class Imu2Compass:
 
 		self.sbus_cmd_steering = msg.data[0]
 		self.sbus_cmd_throttle = msg.data[1]
-
-	def fix_vel_callback(self, msg):
-		self.vel_x = msg.twist.twist.linear.x
-		self.vel_y = msg.twist.twist.linear.y
-
-		self.vel_norm = np.sqrt(self.vel_x**2 + self.vel_y**2)
 		
 
 	def get_bearing(self, lat1, lon1, lat2, lon2):
@@ -317,8 +330,8 @@ class Imu2Compass:
 					self.last_time_manual_cal = time.time()
 					self.last_time_auto_cal = time.time()
 
-			print("p_hdg: {:.2f} | hdg: {:.2f} | hdg_off: {:.2f} | hdg_off_est: {:.2f} | brg: {:.2f} | cal_offset: {:}".format(\
-				self.pure_hdg, hdg, self.hdg_offset, self.hdg_off_est, self.brg, self.cal_offset))
+			#print("p_hdg: {:.2f} | hdg: {:.2f} | hdg_off: {:.2f} | hdg_off_est: {:.2f} | brg: {:.2f} | cal_offset: {:}".format(\
+			#	self.pure_hdg, hdg, self.hdg_offset, self.hdg_off_est, self.brg, self.cal_offset))
 
 
 			# #######################################
@@ -394,4 +407,18 @@ class Imu2Compass:
 
 
 if __name__ == '__main__':
-	a = Imu2Compass()
+
+	parser = argparse.ArgumentParser(description='Compass simulation node of jmoab-ros')
+	parser.add_argument('--ns',
+						help="a namespace in front of original topic")
+
+	#args = parser.parse_args()
+	args = parser.parse_args(rospy.myargv()[1:])	# to make it work on launch file
+	ns = args.ns
+
+	if ns is not None:
+		print("Use namespace as {:}".format(ns))
+	else:
+		print("No namespace, using default")
+
+	a = Imu2Compass(ns)
