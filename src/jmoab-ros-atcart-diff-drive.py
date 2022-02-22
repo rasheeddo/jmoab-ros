@@ -3,24 +3,16 @@ import rospy
 from smbus2 import SMBus
 from std_msgs.msg import Int32MultiArray, Int8
 import time
+import argparse
 
-class JMOAB_ATCart:
+class JMOAB_ATCart(object):
 
-	def __init__(self):
+	def __init__(self, NS):
 
 		rospy.init_node('jmoab_ros_atcart_diff_drive_node', anonymous=True)
 		rospy.loginfo("Start JMOAB-ROS-ATCart node")
 
 		self.bus = SMBus(1)
-
-		self.sbus_ch_pub = rospy.Publisher("/sbus_rc_ch", Int32MultiArray, queue_size=10)
-		self.sbus_ch = Int32MultiArray()
-
-		self.atcart_mode_pub = rospy.Publisher("/atcart_mode", Int8, queue_size=10)
-		self.atcart_mode = Int8()
-
-		rospy.Subscriber("/sbus_cmd", Int32MultiArray, self.cmd_callback)
-		rospy.Subscriber("/atcart_mode_cmd", Int8, self.cart_mode_callack)
 
 		#### SBUS Steering Throttle ####
 		self.sbus_steering_mid = 1024
@@ -46,11 +38,37 @@ class JMOAB_ATCart:
 		self.sbus_min_forward = 1093	# a value before start rotating forward
 		self.prev_y = 0.0
 
+		#### Pub/Sub ####
+		if NS is None:
+			sbus_rc_topic = "/sbus_rc_ch"
+			atcart_mode_topic = "/atcart_mode"
+			sbus_cmd_topic = "/sbus_cmd"
+			atcart_mode_cmd_topic = "/atcart_mode_cmd"
+		else:
+			if NS.startswith("/"):
+				sbus_rc_topic = NS + "/sbus_rc_ch"
+				atcart_mode_topic = NS + "/atcart_mode"
+				sbus_cmd_topic = NS + "/sbus_cmd"
+				atcart_mode_cmd_topic = NS + "/atcart_mode_cmd"
+			else:
+				sbus_rc_topic = "/" + NS + "/sbus_rc_ch"
+				atcart_mode_topic = "/" + NS + "/atcart_mode"
+				sbus_cmd_topic = "/" + NS + "/sbus_cmd"
+				atcart_mode_cmd_topic = "/" + NS + "/atcart_mode_cmd"
 
-		rospy.loginfo("Publishing SBUS RC channel on /sbus_rc_ch topic")
-		rospy.loginfo("Subscribing on /sbus_cmd topic for steering and throttle values")
-		rospy.loginfo("Publishing ATCart mode on /atcart_mode topic")
-		rospy.loginfo("Subscribing on /atcart_mode_cmd topic for mode changing")
+		self.sbus_ch_pub = rospy.Publisher(sbus_rc_topic, Int32MultiArray, queue_size=10)
+		self.sbus_ch = Int32MultiArray()
+		self.atcart_mode_pub = rospy.Publisher(atcart_mode_topic, Int8, queue_size=10)
+		self.atcart_mode = Int8()
+
+		rospy.Subscriber(sbus_cmd_topic, Int32MultiArray, self.cmd_callback)
+		rospy.Subscriber(atcart_mode_cmd_topic, Int8, self.cart_mode_callack)
+
+
+		rospy.loginfo("Publishing SBUS RC channel on {:} topic".format(sbus_rc_topic))
+		rospy.loginfo("Subscribing on {:} topic for steering and throttle values".format(sbus_cmd_topic))
+		rospy.loginfo("Publishing ATCart mode on {:} topic".format(atcart_mode_topic))
+		rospy.loginfo("Subscribing on {:} topic for mode changing".format(atcart_mode_cmd_topic))
 
 		## If want to bypass sbus failsafe uncomment this
 		self.bypass_sbus_failsafe()
@@ -221,4 +239,18 @@ class JMOAB_ATCart:
 
 
 if __name__ == '__main__':
+
+	parser = argparse.ArgumentParser(description='ATCart diff-drive for jmoab-ros')
+	parser.add_argument('--ns',
+						help="a namespace in front of topics")
+
+	args = parser.parse_args(rospy.myargv()[1:])	# to make it work on launch file
+	ns = args.ns
+
+	if ns is not None:
+		print("Use namespace as {:}".format(ns))
+	else:
+		print("No namespace, using default")
+
+
 	jmoab = JMOAB_ATCart()

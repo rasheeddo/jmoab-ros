@@ -72,7 +72,7 @@ class JMOAB_ADC(object):
 
 if __name__ == "__main__":
 
-	parser = argparse.ArgumentParser(description='Compass simulation node of jmoab-ros')
+	parser = argparse.ArgumentParser(description='ADC simulation node of jmoab-ros')
 	parser.add_argument('--ns',
 						help="a namespace in front of original topic")
 

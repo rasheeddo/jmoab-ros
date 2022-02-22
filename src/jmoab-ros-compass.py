@@ -8,27 +8,16 @@ import time
 import struct
 import numpy as np
 import os
+import argparse
 
-class JMOAB_COMPASS:
+class JMOAB_COMPASS(object):
 
-	def __init__(self):
+	def __init__(self, NS):
 
 		rospy.init_node('jmoab_ros_compass_node', anonymous=True)
 		rospy.loginfo("Start JMOAB-ROS-COMPASS node")
 
 		self.bus = SMBus(1)
-
-		self.compass_pub = rospy.Publisher("/jmoab_compass", Float32MultiArray, queue_size=10)
-		self.compass_msg = Float32MultiArray()
-		self.hdg_calib_flag_pub = rospy.Publisher("/hdg_calib_flag", Bool, queue_size=10)
-		self.hdg_calib_flag_msg = Bool()
-		# self.sbus_cmd_pub = rospy.Publisher("/sbus_cmd", Int32MultiArray, queue_size=10)
-		# self.sbus_cmd = Int32MultiArray()
-		self.atcart_mode_cmd_pub = rospy.Publisher("/atcart_mode_cmd", Int8, queue_size=10)
-		self.atcart_mode_cmd_msg = Int8()
-
-		rospy.loginfo("Publishing Roll-Pitch-Heading /jmoab_compass topic respect to true north")
-		rospy.loginfo("Publishing Calibration flag as /hdg_calib_flag in case of calibrating")
 
 		## BNO055 address and registers
 		self.IMU_ADDR = 0x28
@@ -126,34 +115,20 @@ class JMOAB_COMPASS:
 		rospy.loginfo("heading offset {:.2f}".format(self.hdg_offset))
 		self.lat = 0.0
 		self.lon = 0.0
-		self.calib_flag = False
+		# self.calib_flag = False
 		self.get_latlon_once = True
 		self.ch7_from_high = False
 		self.start_hdg = 0.0
 
-		##########
-		## TODO ##
-		###################################################################################
-		## find steering/throttle where the bot can go as much straight line as possible ##
-		## using jmoab-ros/example/sbus_cmd_sender.py for test script to find            ##
-		###################################################################################
-		self.sbus_steering = 969
-		self.sbus_throttle = 1160
+		# self.sbus_steering = 969
+		# self.sbus_throttle = 1160
 
-		self.hdg_ref = 0.0
-		self.hdg_ref_flag = False
-		self.hdg_ref_timestamp = time.time()
-		self.hdg_ref_timeout = 10.0
-		self.diff_hdg = 0.0
+		# self.hdg_ref = 0.0
+		# self.hdg_ref_flag = False
+		# self.hdg_ref_timestamp = time.time()
+		# self.hdg_ref_timeout = 10.0
+
 		self.cart_mode = 0
-		self.from_diff_cal = True
-		self.hdg_ref_list_length = 500
-		self.diff_hdg_list_length = 1000
-		self.diff_hdg_ave = 0.0
-		self.robot_move = False
-		self.prev_hdg_ref_smooth = 0.0
-		self.robot_move_stamp = time.time()
-
 
 		self.sbus_cmd_throttle = 1024
 		self.sbus_cmd_steering = 1024
@@ -176,14 +151,46 @@ class JMOAB_COMPASS:
 		self.error_est = 10.0 
 		self.error_mea = 8.0 # a variance of
 
+		#############
+		## Pub/Sub ##
+		#############
+		if NS is None:
+			gps_topic = "/ublox/fix"
+			sbus_rc_topic = "/sbus_rc_ch"
+			sbus_cmd_topic = "/sbus_cmd"
+			atcart_mode_topic = "/atcart_mode"
+			jmoab_compass_topic = "/jmoab_compass"
+		else:
+			if NS.startswith("/"):
+				gps_topic = NS + "/ublox/fix"
+				sbus_rc_topic = NS + "/sbus_rc_ch"
+				sbus_cmd_topic = NS + "/sbus_cmd"
+				atcart_mode_topic = NS + "/atcart_mode"
+				jmoab_compass_topic = NS + "/jmoab_compass"
+			else:
+				gps_topic = "/" + NS + "/ublox/fix"
+				sbus_rc_topic = "/" + NS + "/sbus_rc_ch"
+				sbus_cmd_topic = "/" + NS + "/sbus_cmd"
+				atcart_mode_topic = "/" + NS + "/atcart_mode"
+				jmoab_compass_topic = "/" + NS + "/jmoab_compass"
 
-		rospy.Subscriber("/ublox/fix", NavSatFix, self.gps_callback)
-		rospy.Subscriber("/sbus_rc_ch", Int32MultiArray, self.sbus_callback)
+		self.compass_pub = rospy.Publisher(jmoab_compass_topic, Float32MultiArray, queue_size=10)
+		self.compass_msg = Float32MultiArray()
+		# self.hdg_calib_flag_pub = rospy.Publisher("/hdg_calib_flag", Bool, queue_size=10)
+		# self.hdg_calib_flag_msg = Bool()
+		# self.sbus_cmd_pub = rospy.Publisher("/sbus_cmd", Int32MultiArray, queue_size=10)
+		# self.sbus_cmd = Int32MultiArray()
+		# self.atcart_mode_cmd_pub = rospy.Publisher("/atcart_mode_cmd", Int8, queue_size=10)
+		# self.atcart_mode_cmd_msg = Int8()
 
-		rospy.Subscriber("/heading", QuaternionStamped, self.heading_ref_callback)
-		rospy.Subscriber("atcart_mode", Int8, self.atcart_mode_callback)
-		rospy.Subscriber("/sbus_cmd", Int32MultiArray, self.sbus_cmd_callback)
+		rospy.Subscriber(gps_topic, NavSatFix, self.gps_callback)
+		rospy.Subscriber(sbus_rc_topic, Int32MultiArray, self.sbus_callback)
+		# rospy.Subscriber("/heading", QuaternionStamped, self.heading_ref_callback)
+		rospy.Subscriber(atcart_mode_topic, Int8, self.atcart_mode_callback)
+		rospy.Subscriber(sbus_cmd_topic, Int32MultiArray, self.sbus_cmd_callback)
 
+		rospy.loginfo("Publishing Roll-Pitch-Heading {:} topic respect to true north".format(jmoab_compass_topic))
+		# rospy.loginfo("Publishing Calibration flag as /hdg_calib_flag in case of calibrating")
 
 		self.loop()
 		rospy.spin()
@@ -230,26 +237,26 @@ class JMOAB_COMPASS:
 		self.sbus_cmd_steering = msg.data[0]
 		self.sbus_cmd_throttle = msg.data[1]
 
-	def heading_ref_callback(self, data):
-		qw = data.quaternion.w
-		qx = data.quaternion.x
-		qy = data.quaternion.y
-		qz = data.quaternion.z
+	# def heading_ref_callback(self, data):
+	# 	qw = data.quaternion.w
+	# 	qx = data.quaternion.x
+	# 	qy = data.quaternion.y
+	# 	qz = data.quaternion.z
 
-		r11 = qw**2 + qx**2 - qy**2 - qz**2 #1 - 2*qy**2 - 2*qz**2
-		r12 = 2*qx*qy - 2*qz*qw
-		r13 = 2*qx*qz + 2*qy*qw
-		r21 = 2*qx*qy + 2*qz*qw
-		r22 = qw**2 - qx**2 + qy**2 - qz**2	#1 - 2*qx**2 - 2*qz**2
-		r23 = 2*qy*qz - 2*qx*qw
-		r31 = 2*qx*qz - 2*qy*qw
-		r32 = 2*qy*qz + 2*qx*qw
-		r33 = qw**2 - qx**2 - qy**2 + qz**2	#1 - 2*qx**2 - 2*qy**2
-		rot = np.array([[r11,r12,r13],[r21,r22,r23],[r31,r32,r33]])
+	# 	r11 = qw**2 + qx**2 - qy**2 - qz**2 #1 - 2*qy**2 - 2*qz**2
+	# 	r12 = 2*qx*qy - 2*qz*qw
+	# 	r13 = 2*qx*qz + 2*qy*qw
+	# 	r21 = 2*qx*qy + 2*qz*qw
+	# 	r22 = qw**2 - qx**2 + qy**2 - qz**2	#1 - 2*qx**2 - 2*qz**2
+	# 	r23 = 2*qy*qz - 2*qx*qw
+	# 	r31 = 2*qx*qz - 2*qy*qw
+	# 	r32 = 2*qy*qz + 2*qx*qw
+	# 	r33 = qw**2 - qx**2 - qy**2 + qz**2	#1 - 2*qx**2 - 2*qy**2
+	# 	rot = np.array([[r11,r12,r13],[r21,r22,r23],[r31,r32,r33]])
 
-		self.hdg_ref = self.ConvertTo360Range(np.degrees(np.arctan2(rot[1,0],rot[0,0])))
-		self.hdg_ref_flag = True
-		self.hdg_ref_timestamp = time.time()
+	# 	self.hdg_ref = self.ConvertTo360Range(np.degrees(np.arctan2(rot[1,0],rot[0,0])))
+	# 	self.hdg_ref_flag = True
+	# 	self.hdg_ref_timestamp = time.time()
 
 	def atcart_mode_callback(self, msg):
 		self.cart_mode = msg.data
@@ -259,10 +266,10 @@ class JMOAB_COMPASS:
 		self.sbus_steering_stick = msg.data[0]
 		self.sbus_throttle_stick = msg.data[1]
 
-		if msg.data[6] > 1500:
-			self.calib_flag = True
-		else:
-			self.calib_flag = False
+		# if msg.data[6] > 1500:
+		# 	self.calib_flag = True
+		# else:
+		# 	self.calib_flag = False
 
 	def imu_int(self):
 
@@ -594,4 +601,16 @@ class JMOAB_COMPASS:
 
 if __name__ == "__main__":
 
-	jmoab_compass = JMOAB_COMPASS()
+	parser = argparse.ArgumentParser(description='Compass node of jmoab-ros')
+	parser.add_argument('--ns',
+						help="a namespace in front of original topic")
+
+	#args = parser.parse_args()
+	args = parser.parse_args(rospy.myargv()[1:])	# to make it work on launch file
+	ns = args.ns
+
+	if ns is not None:
+		print("Use namespace as {:}".format(ns))
+	else:
+
+	jmoab_compass = JMOAB_COMPASS(ns)
