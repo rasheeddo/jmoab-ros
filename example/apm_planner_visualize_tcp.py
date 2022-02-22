@@ -69,30 +69,10 @@ class APM(object):
 		self.time_boot_ms_start = time.time()
 		self.rcChannels_last_send_stamp = time.time()
 
-
-
 		mavutil.set_dialect("ardupilotmega")
 		_port = 5660 + (ID*100)
 		self.master = mavutil.mavlink_connection('tcp:{:}:{:d}'.format(IP,_port), source_system=ID, source_component=1)
 		print("Opening APMPlanner2 with TCP connection as server by port {:d}".format(_port))
-		'''
-		To make autopilot script and GCS communicate as two ways
-		we need to add this 
-
-		self.port.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-		self.port.bind(("0.0.0.0", 0))
-
-		on mavutil.py, in my case I am uisng python3.5
-
-		the file is in /usr/local/lib/python3.5/dist-packages/pymavlink/mavutil.py 
-		at class mavudp(mavfile) __init__ block, under else condition this line
-		https://github.com/ArduPilot/pymavlink/blob/d349f5f211198682d08d48cb5fe16a8cd739afa4/mavutil.py#L1018
-
-
-		the reason is when we are using udpout:<gcs_ip>:<port> on mavlink_connection, it allows only sending to GCS
-		we need to bind(("0.0.0.0",0)) in order to make our Autopilot script listen back what GCS is replying
-
-		'''
 
 		### Mission file ###
 		self.mission_file_path = mission_dir
@@ -274,53 +254,12 @@ class APM(object):
 
 				self.sysStatus_last_send_stamp = time.time()
 
-			# ## PARAM ###
-			# if ((time.time() - self.param_last_send_stamp) > (1.0/self.param_rate)):
-			# 	for ii, param_elem in enumerate(self.param_list):
-			# 		param_id = param_elem[0] # param_id : Onboard parameter id, terminated by NULL if the length is less than 16 human-readable chars and WITHOUT null termination (NULL) byte if the length is exactly 16 chars - applications have to provide 16+1 bytes storage if the ID is stored as string (type:char)
-			# 		param_value = param_elem[1] #133976 # param_value               : Onboard parameter value (type:float)
-			# 		param_type = param_elem[2] # param_type                : Onboard parameter type. (type:uint8_t, values:MAV_PARAM_TYPE)
-			# 		param_count = len(self.param_list) #811 # param_count               : Total number of onboard parameters (type:uint16_t)
-			# 		param_index =  ii #65535 # param_index               : Index of this onboard parameter (type:uint16_t)
-			# 		self.master.mav.param_value_send(param_id, param_value, param_type, param_count, param_index)
-			# 	self.param_last_send_stamp = time.time()
-
 			### SYSTEM_TIME ###
 			if ((time.time() - self.sysTime_last_send_stamp) > (1.0/self.sys_time_rate)):
 				time_unix_usec = int(time.time())	#time_unix_usec            : Timestamp (UNIX epoch time). [us] (type:uint64_t)
 				time_boot_ms = int((time.time() - self.time_boot_ms_start))  #time_boot_ms              : Timestamp (time since system boot). [ms] (type:uint32_t)
 				self.master.mav.system_time_send(time_unix_usec, time_boot_ms)
 				self.sysTime_last_send_stamp = time.time()
-
-			### RC_CHANNELS ###
-			# if ((time.time() - self.rcChannels_last_send_stamp) > (1.0/self.rcChannels_rate)):
-
-			# 	time_boot_ms = int((time.time() - self.time_boot_ms_start)) # Timestamp (time since system boot). [ms] (type:uint32_t)
-			# 	chancount = 16 # Total number of RC channels being received. This can be larger than 18, indicating that more channels are available but not given in this message. This value should be 0 when no RC channels are available. (type:uint8_t)
-			# 	chan1_raw = self.rc1 # RC channel 1 value. [us] (type:uint16_t)
-			# 	chan2_raw = self.rc2 # RC channel 2 value. [us] (type:uint16_t)
-			# 	chan3_raw = self.rc3 # RC channel 3 value. [us] (type:uint16_t)
-			# 	chan4_raw = self.rc4 # RC channel 4 value. [us] (type:uint16_t)
-			# 	chan5_raw = self.rc5 # RC channel 5 value. [us] (type:uint16_t)
-			# 	chan6_raw = self.rc6 # RC channel 6 value. [us] (type:uint16_t)
-			# 	chan7_raw = self.rc7 # RC channel 7 value. [us] (type:uint16_t)
-			# 	chan8_raw = self.rc8 # RC channel 8 value. [us] (type:uint16_t)
-			# 	chan9_raw = self.rc9# RC channel 9 value. [us] (type:uint16_t)
-			# 	chan10_raw = self.rc10 # RC channel 10 value. [us] (type:uint16_t)
-			# 	chan11_raw = self.rc11 # RC channel 11 value. [us] (type:uint16_t)
-			# 	chan12_raw = self.rc12 # RC channel 12 value. [us] (type:uint16_t)
-			# 	chan13_raw = self.rc13 # RC channel 13 value. [us] (type:uint16_t)
-			# 	chan14_raw = self.rc14 # RC channel 14 value. [us] (type:uint16_t)
-			# 	chan15_raw = self.rc15 # RC channel 15 value. [us] (type:uint16_t)
-			# 	chan16_raw = self.rc16 # RC channel 16 value. [us] (type:uint16_t)
-			# 	chan17_raw = 1500 # RC channel 17 value. [us] (type:uint16_t)
-			# 	chan18_raw = 1500 # RC channel 18 value. [us] (type:uint16_t)
-
-			# 	rssi = 0 # Receive signal strength indicator in device-dependent units/scale. Values: [0-254], 255: invalid/unknown. (type:uint8_t)
-
-			# 	self.master.mav.rc_channels_send(time_boot_ms, chancount, chan1_raw, chan2_raw, chan3_raw, chan4_raw, chan5_raw, chan6_raw, chan7_raw, chan8_raw, chan9_raw, chan10_raw, chan11_raw, chan12_raw, chan13_raw, chan14_raw, chan15_raw, chan16_raw, chan17_raw, chan18_raw, rssi)
-				
-			# 	self.rcChannels_last_send_stamp = time.time()
 
 
 			if ((time.time() - self.print_last_stamp) > (1.0/self.print_rate)):

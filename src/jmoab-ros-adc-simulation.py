@@ -3,18 +3,27 @@ import rospy
 from std_msgs.msg import Float32MultiArray
 import time
 import numpy as np
+import argparse
 
-class JMOAB_ADC:
+class JMOAB_ADC(object):
 
-	def __init__(self):
+	def __init__(self, NS):
 		rospy.init_node('jmoab_ros_adc_node', anonymous=True)
 		rospy.loginfo("Start JMOAB-ROS-ADC-Simulation node")
 
-		self.adc_pub = rospy.Publisher("/jmoab_adc", Float32MultiArray, queue_size=10)
+		if NS is None:
+			adc_topic = "/jmoab_adc"
+		else:
+			if NS.startswith("/"):
+				adc_topic = NS + "/jmoab_adc"
+			else:
+				adc_topic = "/" + NS + "/jmoab_adc"
+
+
+		self.adc_pub = rospy.Publisher(adc_topic, Float32MultiArray, queue_size=10)
 		self.adc_array = Float32MultiArray()
 
-		rospy.loginfo("Publishing ADC values on /jmoab_adc topic")
-
+		# rospy.loginfo("Publishing ADC values on /jmoab_adc topic")
 		self.start_time = time.time()
 		self.battery_life = 21600.0 # in seconds, 60x60xhours
 		self.battery_full_charged = 25.2 # in volt, 6 cells LIPO
@@ -63,4 +72,17 @@ class JMOAB_ADC:
 
 if __name__ == "__main__":
 
-	ADC = JMOAB_ADC()
+	parser = argparse.ArgumentParser(description='Compass simulation node of jmoab-ros')
+	parser.add_argument('--ns',
+						help="a namespace in front of original topic")
+
+	#args = parser.parse_args()
+	args = parser.parse_args(rospy.myargv()[1:])	# to make it work on launch file
+	ns = args.ns
+
+	if ns is not None:
+		print("Use namespace as {:}".format(ns))
+	else:
+		print("No namespace, using default")
+
+	ADC = JMOAB_ADC(ns)

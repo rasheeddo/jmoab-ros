@@ -70,7 +70,6 @@ class Imu2Compass(object):
 
 		if NS is None:
 			gps_topic = "/ublox/fix"
-			compass_topic = "/jmoab_compass"
 			imu_topic = "/imu"
 			sbus_cmd_topic = "/sbus_cmd"
 			atcart_mode_topic = "/atcart_mode"
@@ -78,14 +77,12 @@ class Imu2Compass(object):
 		else:
 			if NS.startswith("/"):
 				gps_topic = NS + "/ublox/fix"
-				compass_topic = NS + "/jmoab_compass"
 				imu_topic = NS + "/imu"
 				sbus_cmd_topic = NS + "/sbus_cmd"
 				atcart_mode_topic = NS + "/atcart_mode"
 				jmoab_compass_topic = NS + "/jmoab_compass"
 			else:
 				gps_topic = "/" + NS + "/ublox/fix"
-				compass_topic = "/" + NS + "/jmoab_compass"
 				imu_topic = "/" + NS + "/imu"
 				sbus_cmd_topic = "/" + NS + "/sbus_cmd"
 				atcart_mode_topic = "/" + NS + "/atcart_mode"

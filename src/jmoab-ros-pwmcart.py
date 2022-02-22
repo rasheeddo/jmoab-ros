@@ -38,7 +38,7 @@ class JMOAB_PWMCart:
 		self.cmd_steering = self.sbus_mid
 		self.cmd_throttle = self.sbus_mid
 
-		self.callback_timeout = 1.0 # second
+		self.callback_timeout = 5.0 # second
 		self.callback_timestamp = time.time()
 
 		self.rev_str = True #False
@@ -72,12 +72,12 @@ class JMOAB_PWMCart:
 		self.write_atcart_mode(0x00)
 		time.sleep(0.1)
 
-		## Set back to auto mode
-		self.write_atcart_mode(0x02)
+		## Set back to manual mode
+		self.write_atcart_mode(0x01)
 		time.sleep(0.1)
-		self.write_atcart_mode(0x02)
+		self.write_atcart_mode(0x01)
 		time.sleep(0.1)
-		self.write_atcart_mode(0x02)
+		self.write_atcart_mode(0x01)
 		time.sleep(0.1)
 
 	def write_atcart_mode(self, mode_num):
@@ -196,78 +196,69 @@ class JMOAB_PWMCart:
 
 		rate = rospy.Rate(20) # 10hz
 		prev_ch5 = 1024
-		propo_mode_changed = False
 
 		while not rospy.is_shutdown():
 
 			sbus_ch_array = self.get_sbus_channel()
 
-			if (140 < sbus_ch_array[4] < 1950) and (140 < sbus_ch_array[6] < 1950):
+			self.sbus_ch.data = sbus_ch_array
+			self.sbus_ch_pub.publish(self.sbus_ch)
 
-				self.sbus_ch.data = sbus_ch_array
-				self.sbus_ch_pub.publish(self.sbus_ch)
-
-				if prev_ch5 != sbus_ch_array[4]:
-					propo_mode_changed = True
-				else:
-					propo_mode_changed = False
-
-				# if sbus_ch_array[4] > 1500 or ((self.mode == "AUTO") and not propo_mode_changed):
-				if self.mode_num == 2:
-					if ((time.time() - self.callback_timestamp) > self.callback_timeout):
-						left_pwm = 1520
-						right_pwm = 1520
-						self.cmd_steering = 1024
-						self.cmd_throttle = 1024
-					else:
-						left_pwm, right_pwm = self.channel_mixing(self.cmd_steering, self.cmd_throttle)
-						
-					self.mode_num = 2
-					self.mode = "AUTO"
-
-				elif self.mode_num == 1:
-				# elif sbus_ch_array[4] < 1500:
-					left_pwm, right_pwm = self.channel_mixing(sbus_ch_array[0], sbus_ch_array[1])
-					self.mode = "MANUAL"
-					self.cmd_steering = 1024
-					self.cmd_throttle = 1024
-					self.mode_num = 1
-
-				elif self.mode_num == 0:
-				# elif sbus_ch_array[4] < 700 or ((self.mode == "HOLD") and not propo_mode_changed):
-					left_pwm = self.pwm_mid
-					right_pwm = self.pwm_mid
-					self.cmd_steering = 1024
-					self.cmd_throttle = 1024
-					self.mode = "HOLD"
-					self.mode_num = 0
-
-				else:
-					self.mode = "UNKNOWN"
+			# if sbus_ch_array[4] > 1500 or ((self.mode == "AUTO") and not propo_mode_changed):
+			if self.mode_num == 2:
+				if ((time.time() - self.callback_timestamp) > self.callback_timeout):
 					left_pwm = 1520
 					right_pwm = 1520
 					self.cmd_steering = 1024
 					self.cmd_throttle = 1024
-					self.mode_num = 3
-
-				## Set limit for safety
-				if (900 < right_pwm < 2100) and (900 < right_pwm < 2100): 
-					self.send_pwm_leftright(left_pwm, right_pwm)
-
-
-				## Logging to screen
-				if self.mode != "AUTO":
-					print("mode: {:} | mode_num: {:d} | sbus_str: {:d} | sbus_thr: {:d} | pwm_left: {:d} | pwm_right: {:d}".format(\
-						self.mode, self.mode_num, sbus_ch_array[0], sbus_ch_array[1], left_pwm, right_pwm))
+					print("SBUS Timeout...")
 				else:
-					print("mode: {:} | mode_num: {:d} | sbus_str: {:d} | sbus_thr: {:d} | pwm_left: {:d} | pwm_right: {:d}".format(\
-						self.mode, self.mode_num, self.cmd_steering, self.cmd_throttle, left_pwm, right_pwm))
+					left_pwm, right_pwm = self.channel_mixing(self.cmd_steering, self.cmd_throttle)
+					
+				self.mode_num = 2
+				self.mode = "AUTO"
+
+			elif self.mode_num == 1:
+			# elif sbus_ch_array[4] < 1500:
+				left_pwm, right_pwm = self.channel_mixing(sbus_ch_array[0], sbus_ch_array[1])
+				self.mode = "MANUAL"
+				self.cmd_steering = 1024
+				self.cmd_throttle = 1024
+				self.mode_num = 1
+
+			elif self.mode_num == 0:
+			# elif sbus_ch_array[4] < 700 or ((self.mode == "HOLD") and not propo_mode_changed):
+				left_pwm = self.pwm_mid
+				right_pwm = self.pwm_mid
+				self.cmd_steering = 1024
+				self.cmd_throttle = 1024
+				self.mode = "HOLD"
+				self.mode_num = 0
+
+			else:
+				self.mode = "UNKNOWN"
+				left_pwm = 1520
+				right_pwm = 1520
+				self.cmd_steering = 1024
+				self.cmd_throttle = 1024
+				self.mode_num = 3
+
+			## Set limit for safety
+			if (900 < left_pwm < 2100) and (900 < right_pwm < 2100): 
+				self.send_pwm_leftright(left_pwm, right_pwm)
 
 
-				self.atcart_mode.data =  self.read_atcart_mode() #self.mode_num
-				self.atcart_mode_pub.publish(self.atcart_mode)
+			## Logging to screen
+			# if self.mode != "AUTO":
+			# 	print("mode: {:} | mode_num: {:d} | sbus_str: {:d} | sbus_thr: {:d} | pwm_left: {:d} | pwm_right: {:d}".format(\
+			# 		self.mode, self.mode_num, sbus_ch_array[0], sbus_ch_array[1], left_pwm, right_pwm))
+			# else:
+			# 	print("mode: {:} | mode_num: {:d} | sbus_str: {:d} | sbus_thr: {:d} | pwm_left: {:d} | pwm_right: {:d}".format(\
+			# 		self.mode, self.mode_num, self.cmd_steering, self.cmd_throttle, left_pwm, right_pwm))
 
-				prev_ch5 = sbus_ch_array[4]
+
+			self.atcart_mode.data =  self.read_atcart_mode() #self.mode_num
+			self.atcart_mode_pub.publish(self.atcart_mode)
 
 
 			rate.sleep()
