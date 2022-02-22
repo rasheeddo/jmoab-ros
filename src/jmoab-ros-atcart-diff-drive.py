@@ -253,4 +253,4 @@ if __name__ == '__main__':
 		print("No namespace, using default")
 
 
-	jmoab = JMOAB_ATCart()
+	jmoab = JMOAB_ATCart(ns)
