@@ -612,5 +612,6 @@ if __name__ == "__main__":
 	if ns is not None:
 		print("Use namespace as {:}".format(ns))
 	else:
-
+		print("No namespace, using default")
+		
 	jmoab_compass = JMOAB_COMPASS(ns)
