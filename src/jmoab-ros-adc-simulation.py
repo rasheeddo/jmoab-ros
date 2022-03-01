@@ -11,15 +11,7 @@ class JMOAB_ADC(object):
 		rospy.init_node('jmoab_ros_adc_node', anonymous=True)
 		rospy.loginfo("Start JMOAB-ROS-ADC-Simulation node")
 
-		if NS is None:
-			adc_topic = "/jmoab_adc"
-		else:
-			if NS.startswith("/"):
-				adc_topic = NS + "/jmoab_adc"
-			else:
-				adc_topic = "/" + NS + "/jmoab_adc"
-
-
+		adc_topic = self.namespace_attaching(NS,"/jmoab_adc")
 		self.adc_pub = rospy.Publisher(adc_topic, Float32MultiArray, queue_size=10)
 		self.adc_array = Float32MultiArray()
 
@@ -34,6 +26,16 @@ class JMOAB_ADC(object):
 		self.loop()
 
 		rospy.spin()
+
+	def namespace_attaching(self, NS, topic_name):
+		if NS is None:
+			return topic_name
+		else:
+			if NS.startswith("/"):
+				topic_name = NS + topic_name
+			else:
+				topic_name = "/" + NS + topic_name
+			return topic_name
 
 	def map(self, val, in_min, in_max, out_min, out_max):
 		m = (out_max - out_min)/(in_max - in_min)

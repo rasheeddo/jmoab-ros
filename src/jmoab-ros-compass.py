@@ -154,46 +154,29 @@ class JMOAB_COMPASS(object):
 		#############
 		## Pub/Sub ##
 		#############
-		if NS is None:
-			gps_topic = "/ublox/fix"
-			sbus_rc_topic = "/sbus_rc_ch"
-			sbus_cmd_topic = "/sbus_cmd"
-			atcart_mode_topic = "/atcart_mode"
-			jmoab_compass_topic = "/jmoab_compass"
-		else:
-			if NS.startswith("/"):
-				gps_topic = NS + "/ublox/fix"
-				sbus_rc_topic = NS + "/sbus_rc_ch"
-				sbus_cmd_topic = NS + "/sbus_cmd"
-				atcart_mode_topic = NS + "/atcart_mode"
-				jmoab_compass_topic = NS + "/jmoab_compass"
-			else:
-				gps_topic = "/" + NS + "/ublox/fix"
-				sbus_rc_topic = "/" + NS + "/sbus_rc_ch"
-				sbus_cmd_topic = "/" + NS + "/sbus_cmd"
-				atcart_mode_topic = "/" + NS + "/atcart_mode"
-				jmoab_compass_topic = "/" + NS + "/jmoab_compass"
-
-		self.compass_pub = rospy.Publisher(jmoab_compass_topic, Float32MultiArray, queue_size=10)
+		self.compass_pub = rospy.Publisher(self.namespace_attaching(NS, "/jmoab_compass"), Float32MultiArray, queue_size=10)
 		self.compass_msg = Float32MultiArray()
-		# self.hdg_calib_flag_pub = rospy.Publisher("/hdg_calib_flag", Bool, queue_size=10)
-		# self.hdg_calib_flag_msg = Bool()
-		# self.sbus_cmd_pub = rospy.Publisher("/sbus_cmd", Int32MultiArray, queue_size=10)
-		# self.sbus_cmd = Int32MultiArray()
-		# self.atcart_mode_cmd_pub = rospy.Publisher("/atcart_mode_cmd", Int8, queue_size=10)
-		# self.atcart_mode_cmd_msg = Int8()
 
-		rospy.Subscriber(gps_topic, NavSatFix, self.gps_callback)
-		rospy.Subscriber(sbus_rc_topic, Int32MultiArray, self.sbus_callback)
-		# rospy.Subscriber("/heading", QuaternionStamped, self.heading_ref_callback)
-		rospy.Subscriber(atcart_mode_topic, Int8, self.atcart_mode_callback)
-		rospy.Subscriber(sbus_cmd_topic, Int32MultiArray, self.sbus_cmd_callback)
+		rospy.Subscriber(self.namespace_attaching(NS, "/ublox/fix"), NavSatFix, self.gps_callback)
+		rospy.Subscriber(self.namespace_attaching(NS, "/sbus_rc_ch"), Int32MultiArray, self.sbus_callback)
+		rospy.Subscriber(self.namespace_attaching(NS, "/atcart_mode"), Int8, self.atcart_mode_callback)
+		rospy.Subscriber(self.namespace_attaching(NS, "/sbus_cmd"), Int32MultiArray, self.sbus_cmd_callback)
 
-		rospy.loginfo("Publishing Roll-Pitch-Heading {:} topic respect to true north".format(jmoab_compass_topic))
+		rospy.loginfo("Publishing Roll-Pitch-Heading {:} topic respect to true north".format(self.namespace_attaching(NS, "/jmoab_compass")))
 		# rospy.loginfo("Publishing Calibration flag as /hdg_calib_flag in case of calibrating")
 
 		self.loop()
 		rospy.spin()
+
+	def namespace_attaching(self, NS, topic_name):
+		if NS is None:
+			return topic_name
+		else:
+			if NS.startswith("/"):
+				topic_name = NS + topic_name
+			else:
+				topic_name = "/" + NS + topic_name
+			return topic_name
 
 	def gps_callback(self, msg):
 

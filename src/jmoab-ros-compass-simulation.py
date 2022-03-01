@@ -59,48 +59,30 @@ class Imu2Compass(object):
 		self.state_predict = self.hdg_off_est
 		self.error_est = 10.0 
 		self.error_mea = 8.0 # a variance of 
-		
-		
-		# self.hdg_calib_flag_pub = rospy.Publisher("/hdg_calib_flag", Bool, queue_size=10)
-		# self.hdg_calib_flag_msg = Bool()
-		# self.sbus_cmd_pub = rospy.Publisher("/sbus_cmd", Int32MultiArray, queue_size=10)
-		# self.sbus_cmd = Int32MultiArray()
-		# self.atcart_mode_cmd_pub = rospy.Publisher("/atcart_mode_cmd", Int8, queue_size=10)
-		# self.atcart_mode_cmd_msg = Int8()
 
-		if NS is None:
-			gps_topic = "/ublox/fix"
-			imu_topic = "/imu"
-			sbus_cmd_topic = "/sbus_cmd"
-			atcart_mode_topic = "/atcart_mode"
-			jmoab_compass_topic = "/jmoab_compass"
-		else:
-			if NS.startswith("/"):
-				gps_topic = NS + "/ublox/fix"
-				imu_topic = NS + "/imu"
-				sbus_cmd_topic = NS + "/sbus_cmd"
-				atcart_mode_topic = NS + "/atcart_mode"
-				jmoab_compass_topic = NS + "/jmoab_compass"
-			else:
-				gps_topic = "/" + NS + "/ublox/fix"
-				imu_topic = "/" + NS + "/imu"
-				sbus_cmd_topic = "/" + NS + "/sbus_cmd"
-				atcart_mode_topic = "/" + NS + "/atcart_mode"
-				jmoab_compass_topic = "/" + NS + "/jmoab_compass"
-
-
-		rospy.Subscriber(imu_topic, Imu, self.imu_callback)
-		rospy.Subscriber(gps_topic, NavSatFix, self.gps_callback)
-		rospy.Subscriber(atcart_mode_topic, Int8, self.atcart_mode_callback)
-		rospy.Subscriber(sbus_cmd_topic, Int32MultiArray, self.sbus_cmd_callback)
+		## Pub/Sub ##
+		rospy.Subscriber(self.namespace_attaching(NS, "/imu"), Imu, self.imu_callback)
+		rospy.Subscriber(self.namespace_attaching(NS, "/ublox/fix"), NavSatFix, self.gps_callback)
+		rospy.Subscriber(self.namespace_attaching(NS, "/atcart_mode"), Int8, self.atcart_mode_callback)
+		rospy.Subscriber(self.namespace_attaching(NS, "/sbus_cmd"), Int32MultiArray, self.sbus_cmd_callback)
 		rospy.Subscriber("joy", Joy, self.joy_callback)
 
-		self.compass_pub = rospy.Publisher(jmoab_compass_topic, Float32MultiArray, queue_size=10)
+		self.compass_pub = rospy.Publisher(self.namespace_attaching(NS, "/jmoab_compass"), Float32MultiArray, queue_size=10)
 		self.compass_msg = Float32MultiArray()
 
 		self.loop()
 
 		rospy.spin()
+
+	def namespace_attaching(self, NS, topic_name):
+		if NS is None:
+			return topic_name
+		else:
+			if NS.startswith("/"):
+				topic_name = NS + topic_name
+			else:
+				topic_name = "/" + NS + topic_name
+			return topic_name
 
 	def ConvertTo360Range(self, deg):
 

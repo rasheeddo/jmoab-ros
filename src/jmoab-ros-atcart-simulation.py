@@ -19,7 +19,7 @@ class ATCartSim(object):
 		self.cmd_steering = 1024
 		self.cmd_throttle = 1024
 
-		self.callback_timeout = 2.0 # second
+		self.callback_timeout = 1.0 # second
 		self.callback_timestamp = time.time()
 
 		self.analog_steering = 1024
@@ -42,22 +42,11 @@ class ATCartSim(object):
 		## 4.5   RPM -->  1100
 		## 143   RPM -->  1680
 
-		if NS is None:
-			cmd_vel_topic = "/cmd_vel"
-			atcart_mode_topic = "/atcart_mode"
-			sbus_cmd_topic = "/sbus_cmd"
-			atcart_mode_cmd_topic = "/atcart_mode_cmd"
-		else:
-			if NS.startswith("/"):
-				cmd_vel_topic = NS + "/cmd_vel"
-				atcart_mode_topic = NS + "/atcart_mode"
-				sbus_cmd_topic = NS + "/sbus_cmd"
-				atcart_mode_cmd_topic = NS + "/atcart_mode_cmd"
-			else:
-				cmd_vel_topic = "/" + NS + "/cmd_vel"
-				atcart_mode_topic = "/" + NS + "/atcart_mode"
-				sbus_cmd_topic = "/" + NS + "/sbus_cmd"
-				atcart_mode_cmd_topic = "/" + NS + "/atcart_mode_cmd"
+		## Pub/Sub ##
+		cmd_vel_topic = self.namespace_attaching(NS, "/cmd_vel")
+		atcart_mode_topic = self.namespace_attaching(NS, "/atcart_mode")
+		sbus_cmd_topic = self.namespace_attaching(NS, "/sbus_cmd")
+		atcart_mode_cmd_topic = self.namespace_attaching(NS, "/atcart_mode_cmd")
 
 		self.cmd_vel_pub = rospy.Publisher(cmd_vel_topic, Twist, queue_size=10)
 		self.cmd_vel = Twist()
@@ -69,16 +58,26 @@ class ATCartSim(object):
 		rospy.Subscriber(atcart_mode_cmd_topic, Int8, self.cart_mode_callack)
 		rospy.Subscriber("joy", Joy, self.joy_callback)
 		
-
-
 		self.loop()
 
 		rospy.spin()
+
+	def namespace_attaching(self, NS, topic_name):
+		if NS is None:
+			return topic_name
+		else:
+			if NS.startswith("/"):
+				topic_name = NS + topic_name
+			else:
+				topic_name = "/" + NS + topic_name
+			return topic_name
 
 	def sbus_cmd_callback(self, msg):
 
 		self.cmd_steering = msg.data[0]
 		self.cmd_throttle = msg.data[1]
+
+		self.callback_timestamp = time.time()
 
 	def cart_mode_callack(self, msg):
 		if msg.data == 0:
@@ -165,7 +164,11 @@ class ATCartSim(object):
 				sbus_throttle = 1024
 
 
-			vx, wz = self.sbus2vel(sbus_steering, sbus_throttle)
+			if ((time.time() - self.callback_timestamp) > self.callback_timeout) and (self.mode_name == "AUTO"):
+				vx = 0.0
+				wz = 0.0
+			else:
+				vx, wz = self.sbus2vel(sbus_steering, sbus_throttle)
 
 
 			self.cmd_vel.linear.x = vx

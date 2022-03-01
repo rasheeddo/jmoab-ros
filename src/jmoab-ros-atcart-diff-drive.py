@@ -39,22 +39,10 @@ class JMOAB_ATCart(object):
 		self.prev_y = 0.0
 
 		#### Pub/Sub ####
-		if NS is None:
-			sbus_rc_topic = "/sbus_rc_ch"
-			atcart_mode_topic = "/atcart_mode"
-			sbus_cmd_topic = "/sbus_cmd"
-			atcart_mode_cmd_topic = "/atcart_mode_cmd"
-		else:
-			if NS.startswith("/"):
-				sbus_rc_topic = NS + "/sbus_rc_ch"
-				atcart_mode_topic = NS + "/atcart_mode"
-				sbus_cmd_topic = NS + "/sbus_cmd"
-				atcart_mode_cmd_topic = NS + "/atcart_mode_cmd"
-			else:
-				sbus_rc_topic = "/" + NS + "/sbus_rc_ch"
-				atcart_mode_topic = "/" + NS + "/atcart_mode"
-				sbus_cmd_topic = "/" + NS + "/sbus_cmd"
-				atcart_mode_cmd_topic = "/" + NS + "/atcart_mode_cmd"
+		sbus_rc_topic = self.namespace_attaching(NS, "/sbus_rc_ch")
+		atcart_mode_topic = self.namespace_attaching(NS, "/atcart_mode")
+		sbus_cmd_topic = self.namespace_attaching(NS, "/sbus_cmd")
+		atcart_mode_cmd_topic = self.namespace_attaching(NS, "/atcart_mode_cmd")
 
 		self.sbus_ch_pub = rospy.Publisher(sbus_rc_topic, Int32MultiArray, queue_size=10)
 		self.sbus_ch = Int32MultiArray()
@@ -76,6 +64,16 @@ class JMOAB_ATCart(object):
 		self.loop()
 
 		rospy.spin()
+
+	def namespace_attaching(self, NS, topic_name):
+		if NS is None:
+			return topic_name
+		else:
+			if NS.startswith("/"):
+				topic_name = NS + topic_name
+			else:
+				topic_name = "/" + NS + topic_name
+			return topic_name
 
 
 	def sbus2word(self, sbus_val):
