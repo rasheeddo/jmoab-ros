@@ -1,11 +1,14 @@
 <launch>
 
-	<node pkg="joy" name="joy_node" type="joy_node" output="screen" />
+	<arg name="ns" default="robot1" />
 
-	<node pkg="jmoab-ros" name="jmoab_ros_atcart_node" type="jmoab-ros-atcart-simulation.py" output="screen"/>
+	<!-- <node pkg="joy" name="joy_node" type="joy_node" output="screen" /> -->
 
-	<node pkg="jmoab-ros" name="jmoab_ros_imu_node" type="jmoab-ros-compass-simulation.py" output="screen"/>
+	<node pkg="jmoab-ros" name="jmoab_ros_atcart_node" type="jmoab-ros-atcart-simulation.py" args="--ns $(arg ns)" output="screen"/>
 
-	<node pkg="jmoab-ros" name="jmoab_ros_adc_node" type="jmoab-ros-adc-simulation.py" output="screen"/>
+	<node pkg="jmoab-ros" name="jmoab_ros_imu_node" type="jmoab-ros-compass-simulation.py" args="--ns $(arg ns)" output="screen"/>
+
+	<node pkg="jmoab-ros" name="jmoab_ros_adc_node" type="jmoab-ros-adc-simulation.py" args="--ns $(arg ns)" output="screen"/>
+
 
 </launch>

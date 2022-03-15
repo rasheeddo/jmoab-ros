@@ -7,22 +7,28 @@ import struct
 import numpy as np
 from sensor_msgs.msg import NavSatFix
 import os
+import argparse
 
-class JMOAB_IMU:
+class JMOAB_IMU(object):
 
-	def __init__(self):
+	def __init__(self, addr, NS, frame_name):
 
 		rospy.init_node('jmoab_ros_imu_node', anonymous=True)
 		rospy.loginfo("Start JMOAB-ROS-IMU node")
 
 		self.bus = SMBus(1)
 
-		self.imu_pub = rospy.Publisher("/jmoab_imu_raw", Imu, queue_size=10)
+		self.imu_pub = rospy.Publisher(self.namespace_attaching(NS, "/jmoab_imu_raw"), Imu, queue_size=10)
 		self.imu_msg = Imu()
 		rospy.loginfo("Publishing IMU Quaternion on /jmoab_imu_raw topic")
 
 		## BNO055 address and registers
-		self.IMU_ADDR = 0x28
+		if addr is None:
+			self.IMU_ADDR = 0x28
+		else:
+			self.IMU_ADDR = int(addr, 0) # convert "0x29" a hex of string to integer
+
+		self.frame_name = str(frame_name)
 
 		self.OPR_REG = 0x3d
 		self.AXIS_MAP_CONFIG_REG = 0x41
@@ -96,18 +102,31 @@ class JMOAB_IMU:
 			with open(calib_file_dir, "r") as f:
 				for line in f:
 					self.pre_calib.append(int(line.strip()))
+
+			with_offset = True
 		else:
 			print("There is no calibration_offset.txt file!")
-			print("Do the calibration step first")
-			quit()
+			print("Using default offset on the chip")
+			with_offset = False
 
 		
-		self.imu_int()
+		self.imu_int(with_offset)
 		self.loop()
 
 		rospy.spin()
 
-	def imu_int(self):
+	def namespace_attaching(self, NS, topic_name):
+		if NS is None:
+			return topic_name
+		else:
+			if NS.startswith("/"):
+				topic_name = NS + topic_name
+			else:
+				topic_name = "/" + NS + topic_name
+			return topic_name
+
+
+	def imu_int(self, write_offset):
 
 		## change to operating mode
 		self.bus.write_byte_data(self.IMU_ADDR, self.OPR_REG, self.CONFIG_MODE)
@@ -117,7 +136,8 @@ class JMOAB_IMU:
 		self.config_axis_remap()
 		self.config_axis_sign()
 
-		self.write_pre_calib()
+		if write_offset:
+			self.write_pre_calib()
 
 		## change to operating mode
 		self.bus.write_byte_data(self.IMU_ADDR, self.OPR_REG, self.IMU_MODE)
@@ -213,7 +233,7 @@ class JMOAB_IMU:
 
 
 			self.imu_msg.header.stamp = rospy.Time.now()
-			self.imu_msg.header.frame_id = 'base_link'
+			self.imu_msg.header.frame_id = self.frame_name
 			self.imu_msg.orientation.x = qx #roll
 			self.imu_msg.orientation.y = qy #pitch
 			self.imu_msg.orientation.z = qz #yaw
@@ -242,4 +262,31 @@ class JMOAB_IMU:
 
 if __name__ == "__main__":
 
-	jmoab_imu = JMOAB_IMU()
+	parser = argparse.ArgumentParser(description='Compass node of jmoab-ros')
+	parser.add_argument('--addr',
+						help="i2c address of the imu, default is 0x28")
+	parser.add_argument('--ns',
+						help="a namespace in front of original topic")
+	parser.add_argument('--frame_name',
+						help="a frame name to use with TF")
+
+	#args = parser.parse_args()
+	args = parser.parse_args(rospy.myargv()[1:])	# to make it work on launch file
+	addr = args.addr
+	ns = args.ns
+	frame_name = args.frame_name
+
+	if addr is None:
+		print("Using default i2c address as 0x28")
+
+	if frame_name is None:
+		print("Using default frame name as 'base_link' ")
+		frame_name = "base_link"
+
+
+	if ns is not None:
+		print("Use namespace as {:}".format(ns))
+	else:
+		print("No namespace, using default")
+
+	jmoab_imu = JMOAB_IMU(addr, ns, frame_name)
