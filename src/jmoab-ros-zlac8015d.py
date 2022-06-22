@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 import rospy
 from smbus2 import SMBus
 from std_msgs.msg import Int32MultiArray, Int8, Float32MultiArray
@@ -6,8 +6,9 @@ from nav_msgs.msg import Odometry
 from tf.transformations import quaternion_from_euler
 from geometry_msgs.msg import TransformStamped
 import tf2_ros
-from ZLAC8015D import *
+from zlac8015d import ZLAC8015D
 import time
+import numpy as np
 
 class JMOAB_ZLAC8015D:
 
@@ -71,7 +72,7 @@ class JMOAB_ZLAC8015D:
 		self.prev_mode_num = 3
 
 		### ZLAC8015D Init ###
-		self.zlc = ZLAC8015D()
+		self.zlc = ZLAC8015D.Controller(port="/dev/usb_rs485")
 		self.zlac8015d_speed_mode_init()
 
 		self.max_rpm = 150

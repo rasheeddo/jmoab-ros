@@ -4,8 +4,8 @@ from smbus2 import SMBus
 from sensor_msgs.msg import Imu
 import time
 import struct
-import numpy as np
-from sensor_msgs.msg import NavSatFix
+import numpy as np 
+from std_msgs.msg import Float32MultiArray
 import os
 import argparse
 
@@ -20,6 +20,9 @@ class JMOAB_IMU(object):
 
 		self.imu_pub = rospy.Publisher(self.namespace_attaching(NS, "/jmoab_imu_raw"), Imu, queue_size=10)
 		self.imu_msg = Imu()
+
+		self.ahrs_pub = rospy.Publisher(self.namespace_attaching(NS, "/jmoab_ahrs"), Float32MultiArray, queue_size=10)
+		self.ahrs_msg = Float32MultiArray()
 		rospy.loginfo("Publishing IMU Quaternion on /jmoab_imu_raw topic")
 
 		## BNO055 address and registers
@@ -36,6 +39,7 @@ class JMOAB_IMU(object):
 
 		self.GYRO_x_LSB = 0x14
 
+		self.EUL_Heading_LSB = 0x1a
 		self.QUA_w_LSB = 0x20
 		self.QUA_w_MSB = 0x21
 		self.QUA_x_LSB = 0x22
@@ -198,11 +202,26 @@ class JMOAB_IMU(object):
 		self.bus.write_byte_data(self.IMU_ADDR, self.AXIS_MAP_SIGN_REG, self.SIGN_DEFAULT)
 		time.sleep(0.019)	# 19ms from any mode to config mode
 
+	def read_euler_angles(self):
+		raw = self.bus.read_i2c_block_data(IMU_ADDR, EUL_Heading_LSB, 6)
+		yaw,roll,pitch = struct.unpack('<hhh', bytearray(raw))
+		yaw = yaw/16.0
+		roll = roll/16.0
+		pitch = pitch/16.0
+
+		return [roll, pitch, yaw]
+
 	def loop(self):
 		rate = rospy.Rate(100) # 10hz
 
 		while not rospy.is_shutdown():
 			startTime = time.time()
+
+			raw = self.bus.read_i2c_block_data(self.IMU_ADDR, self.EUL_Heading_LSB, 6)
+			yaw,roll,pitch = struct.unpack('<hhh', bytearray(raw))
+			yaw = yaw/16.0
+			roll = roll/16.0
+			pitch = pitch/16.0
 
 			raw_quat = self.bus.read_i2c_block_data(self.IMU_ADDR, self.QUA_w_LSB, 8)
 			qw,qx,qy,qz = struct.unpack('<hhhh', bytearray(raw_quat))
@@ -226,6 +245,7 @@ class JMOAB_IMU(object):
 			ay = ay/100.0
 			az = az/100.0
 
+		
 
 			# print("{:.3f}  {:.3f}  {:.3f}  {:.3f}".format(qw,qx,qy,qz))
 			# print("gx: {:.3f}  gy: {:.3f}  gz: {:.3f}".format(gx,gy,gz))
@@ -250,9 +270,10 @@ class JMOAB_IMU(object):
 			self.imu_msg.linear_acceleration.z = az
 			self.imu_msg.linear_acceleration_covariance = [1e6, 0, 0, 0, 1e6, 0, 0, 0, 1e-6]
 
-
+			self.ahrs_msg.data = [roll, pitch, yaw]
 
 			self.imu_pub.publish(self.imu_msg)
+			self.ahrs_pub.publish(self.ahrs_msg)
 
 			period = time.time() - startTime 
 			# print("period", period)
