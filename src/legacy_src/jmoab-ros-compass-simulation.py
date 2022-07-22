@@ -55,7 +55,7 @@ class Imu2Compass(object):
 		self.do_estimation = False
 
 		## Kalman filter of hdg_offset estimate
-		self.hdg_off_est = 20.0 # first guess
+		self.hdg_off_est = 0.0 # first guess
 		self.state_predict = self.hdg_off_est
 		self.error_est = 10.0 
 		self.error_mea = 8.0 # a variance of 
@@ -67,7 +67,7 @@ class Imu2Compass(object):
 		rospy.Subscriber(self.namespace_attaching(NS, "/sbus_cmd"), Int32MultiArray, self.sbus_cmd_callback)
 		rospy.Subscriber("joy", Joy, self.joy_callback)
 
-		self.compass_pub = rospy.Publisher(self.namespace_attaching(NS, "/jmoab_compass"), Float32MultiArray, queue_size=10)
+		self.compass_pub = rospy.Publisher(self.namespace_attaching(NS, "/jmoab/ahrs"), Float32MultiArray, queue_size=10)
 		self.compass_msg = Float32MultiArray()
 
 		self.loop()
