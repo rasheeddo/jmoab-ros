@@ -1,6 +1,6 @@
 # BNO055 Compass calibration step
 
-- make sure the Jetson with JMOAB is not lock with the vehicle (in case of medium and huge cart)
+- make sure you can move the BNO055 freely in any direction before attaching to the cart.
 - open the file `example/bno055_compass_calibrate.py`, and make sure the sensor's orientation is placed correctly with `config_axis_sign()` and `config_remap()` functions inside.
 - then run `example/bno055_compass_calibrate.py` it will print all of sensors status, we need to make all sensors status equal to 3
 	- gyro calibration: keep it steady in place will make it success

@@ -27,6 +27,9 @@ Source environment
 - `source ~/.bashrc` 
 - `source ~/catkin/devel/setup.bash`
 
+***Note*** 
+The default source code is for Jetson Nano for i2c bus 1, in case you want to use Jetson Xavier NX, you will need to change the i2c bus on [here](https://github.com/rasheeddo/jmoab-ros/blob/377d59f4a01cb1753efd727c44bf84528dd0e3e1/src/atcart_basic.py#L42) to 8. Similar with other jmoab nodes (bno055_ahrs.py, and etc.).
+
 ## Update JMOAB firmware
 
 All of available firmware are in [firmwares](./firmwares/) directory.
@@ -57,9 +60,9 @@ To flash the firmware, please follow the step below, (must use Windows PC)
 
 `roslaunch jmoab-ros jmoab-ros.alunch` will run all the nodes that have implemented.
 
-Note that the default source code is for Jetson Nano for i2c bus 1, in case you want to use Jetson Xavier NX, you will need to change the i2c bus on [here](https://github.com/rasheeddo/jmoab-ros/blob/3333073baad1f318b0c07b3825c5ef1e6c7bb01a/src/jmoab-ros-atcart.py#L14) to 8. Similar with other jmoab nodes (e.g. IMU).
 
-## JMOAB with ATCart Wheels
+
+## JMOAB atcart_basic
 
 ![](images/jmoab-wiring1.jpg)
 
@@ -70,85 +73,32 @@ The board has an interface to send a command to control ATCart wheel system, it 
 
 ### Run
 
-To run the jmoab_ros_atcart_node
-- `rosrun jmoab-ros jmoab-ros-atcart.py`, 
+`rosrun jmoab-ros atcart_basic.py`, 
 
-List out topics
-- `rostopic list`, you would see there are two topics got generated `/sbus_rc_ch` for publishing SBUS RC channel, and `/sbus_cmd` for subscribing a steering and throttle commands from your autopilot code.
+#### Publisher
 
-Check more detail on example scripts
-- `rosrun jmoab-ros sbus_ch_listener.py` for test reading sbus channel on a script
-- `rosrun jmoab-ros sbus_cmd_sender.py` for test writing a command steering and throttle from a script
+- `/jmoab/sbus_rc_ch` as std_msgs/Int16MultiArray type, the data is array of lenght 10, the value is as SBUS value from radio transmitter channels.
+- `/jmoab/adc` as std_msgs/Float32MultiArray type, the data is array of lenght 6, as 10 bits ADC value from ANALOG port.
+- `/jmoab/cart_mode` as std_msgs/UInt8 type, the data is cart mode; 0 = hold, 1 = manual, 2 = auto.
 
-#### Remarks 
+#### Subscriber
 
-`jmoab-ros-atcart.py` works only with the firmwares of
-
-- v07_20210614_AT_JMOAB01&03.hex
-
-- v07a_20210728_AT_JMOAB01&03.hex
-
-- v07e_20210805_AT_JMOAB01&03_SBUSOUT.hex
-
-For a better stability in autonomous navigation, I highly recommend to use the firmwares of 
-
-- 20220117_AT_JMOAB01_fw_v07.2b_skidsteer.hex 
-
-or 
-
-- 20220117_AT_JMOAB05_fw_v07.2b_skidsteer.hex
-
-Please check all of the firmwares [here](./firmwares/)
-
-This `_skidsteer` version has more evenly controlable in both wheels, because it's non-mixing mode, so we could control each wheel individually. So during steering or skidding, the cart has more precise control.
-
-Please use `jmoab-ros-atcart-diff-drive.py` for both firmwares above. This script has done the mixing mode inside, so we could still publish the same topic as `/sbus_cmd` for [steering, throttle] but the result is much better than default mixing by PSoc controller.
-
-#### Remarks 2
-
-With the new batch of ATCart's ESC with model name of "MN1 WSDC/3+7F&G-X"
-
-![](images/new_batch_esc_SN.jpeg)
-
-![](images/new_batch_joystick.jpeg)
-
-The supplier has changed some handshake package and data ranges, please check the detail on [this repo](https://github.com/rasheeddo/BrushlessDriveWheels/tree/new-batch-esc#hack-new-batch-esc). So we need to upgrade the new firmware too, to be able to use with this new batch ESC. The firmware of new ESC is as following
-
-- 20220127_AT_JMOAB01_fw_v08.2_skidsteer_newESC_steer_REV.hex
-
-- 20220127_AT_JMOAB04_fw_v08.2_skidsteer_newESC_steer_REV.hex
-
-- 20220127_AT_JMOAB05_fw_v08.2_skidsteer_newESC_steer_REV.hex
-
-Those three firmware has the same function, but only the hardware of the JMOAB version is different.
-
-
-### Using wheel's hall effect sensor for odometer
-
-The ATCart wheel itself doesn't give a feedback of anything, in order to get RPM of the wheel we need to install extra sensor attaching on the wheel. Please check the detail on [here](docs/wheels_hall_sensor.md).
+- `/cmd_vel` as geometry_msgs/Twist type, linear.x is considered as throttle value (go straight), angular.z is considered as steering value (curve or skidding). Maximum value is 2.0
+- `/jmoab/wheels_cmd` as std_msgs/Float32MultiArray type, the data is array of lenght 2 as percentage of left/right wheels power, ex: [100.0, 100.0] full speed forward of left/right, [-100.0, -100.0] full speed backward of left/right.
+- `/jmoab/cart_mode_cmd` as std_msgs/UInt8 type, the data is similar to `/jmoab/cart_mode`. We can send 0, 1 or 2 to change mode of the cart programmatically.
+- `/jmoab/relays` as std_msgs/Int8MultiArray type, the data is array of lenght 2, ex: [1,0] => relay1 ON relay2 OFF.
+- `/jmoab/servos` as std_msgs/Int16MultiArray type, the data is array of lenght 3, ex: [1920, 1120, 1520] => PWM1 high, PWM2 low, PWM3 mid.
 
 
 ## JMOAB with BNO055 9axis Orientation Sensor 
 
-![](images/default-imu-orientation.jpg)
+BNO055 could be connected to JMOAB on I2C port.
 
-The default orientation of BNO055 on JMOAB is shown above. As default setup, we will have quaternion data in Fusion mode of IMU. In this mode we will get the data as relative from it firstly started.
+### Before Run
 
-### Run as IMU mode
-To run the jmoab_ros_imu_node
-- `rosrun jmoab-ros jmoab-ros-imu.py`
+It's recommended to do a sensor calibration offset first. Please check on the step [here](docs/compass_calibration_step.md).
 
-List out topics
-- `rostopic list`, you would see there is a topic `jmoab_imu_raw` which is geometry sensor message as quaternion.
-
-So if you place the Jetson upside down (heatsink is pointing down), so there is no need to do dot product of rotation matrix. You can use that quaternion directly, but if your Jetson is placed regularly (heatsink is point up), then you will need to do dot product of rotation matrix. Please check the detail on example directory `imu_listener.py` for how to use convert quaternion to Euluer angle (roll-pitch-yaw), and `imu_repeater.py` to repeat the raw value and republish with some rotation matrix.
-
-We can visualize the imu topic by using rviz_imu_plugin (install from here http://wiki.ros.org/rviz_imu_plugin). Then we could run rviz with the config file [here](rviz/jmoab-imu-test.rviz) and [here](rviz/jmoab-imu-repeater.rviz).
-
-### Run as compass mode
-To run BNO055 as compass mode on JMOAB, we need to calibrate the sensor offset first, please check on the step on this [link.](example/compass_calibration_step.md)
-
-Once the compass is calibrated, the sensor offsets are saved into `calibration_offset.txt` at `example/` directory. So when you run `jmoab-ros-compass.py` it would load that automatically.
+Once the compass is calibrated, the sensor offsets are saved into `calibration_offset.txt` at `example/` directory. So when you run `bno055_ahrs.py` it would load that automatically.
 
 Depends on how you place BNO055 board on the cart, you will face that there is some "heading_offset" when you move the cart even as straight line, but the heading is pointing to other direction. 
 
@@ -156,17 +106,23 @@ To solve that heading offset issue, if your GPS can get RTK-Fixed status, I have
 
 Please check on [this video](https://youtu.be/MqF1ztsyBPM) for more explanation of this algorithms.
 
-
-## JMOAB with ADC
-
-There is Analog-to-Digital converter port where you can use to measure with some sensor devices or battery. The pin header is J7, you could check more detail on the doc [here](docs/AT_JMOAB01_sch201201.pdf). If you are using with ATCart wheel system, then your ESC cable should be plugged on ESC ports (J9 or J10). Then you can monitor the ESC's voltage on A5 channel of ADC.
+With NDOF_MODE, the BNO055 will have absolute heading, or if you need to reset heading everytime then comment [this line](https://github.com/rasheeddo/jmoab-ros/blob/377d59f4a01cb1753efd727c44bf84528dd0e3e1/src/bno055_ahrs.py#L254) and uncomment line under to use as IMU_MODE.
 
 ### Run
-To run the jmoab_ros_adc_node
-- `rosrun jmoab-ros jmoab-ros-adc.py`
+
+`rosrun jmoab-ros bno055_ahrs.py`
+
+#### Publisher
+- `/imu/data` as sensor_msgs/Imu type, the data is as linear acceleration, angular velocity and orientation in quaternion form.
+- `/jmoab/ahrs` as std_msgs/Float32MultiArray type, the data is array of lenght 3 as [roll, pitch, heading] in degrees as East-North-Up frame.
+
+#### Subscriber
+- `/ublox/fix` as sensor_msgs/NavSatFix type, this is for true north heading calibration to know it's location.
+- `/jmoab/sbus_rc_ch` as std_msgs/Int16MultiArray type, this is for true north heading calibration to recognize the cart is moving as straight line.
+- `/jmoab/cart_mode` as std_msgs/UInt8 type, this is for true north heading calibration to recognize the cart is in manual or auto mode.
 
 List out topics
-- `rostopic list`, you will see there is a topic `jmoab_adc` which is Float32Array message, it contains 6 of voltage values from 6 ADC ports. 
+- `rostopic list`, you would see there is a topic `jmoab_imu_raw` which is geometry sensor message as quaternion.
 
 ## JMOAB with F9P GPS
 
@@ -232,7 +188,7 @@ Make sure you specify the correct config file on `param_file_name`.
 
 We could see the gps topic from `rostopic echo /ublox/fix`.
 
-To visualize robot's GPS point and heading, please check on [this](example/gcs.md).
+To visualize robot's GPS point and heading, please check on [this](docs/gcs.md).
 
 To get a precise position, it's better to use RTK base station with F9P GPS. So please following a step below to install RTKLIB.
 
@@ -266,7 +222,7 @@ One GPS and one BNO055 could be enough to run waypoints autonomous driving, but 
 
 The second GPS could be placed at the front of the cart to use as the reference point for heading offset calculation. 
 
-Previously, on one GPS and one compass setup, we have to run the bot in manual to get enough data to let the Kalman filter estimates the correct heading offset. But with 2nd GPS on front, we could have a better heading offset estimated once we started `jmoab-ros-compass-2gps.py` just in few seconds. So two GPS must have RTK-Fixed status, and the heading estimation will be done when the cart is moving as straight line or even at stationary.
+Previously, on one GPS and one compass setup, we have to run the bot in manual to get enough data to let the Kalman filter estimates the correct heading offset. But with 2nd GPS on front, we could have a better heading offset estimated once we started `bno055_ahrs_2GpsRef.py` just in few seconds. So two GPS must have RTK-Fixed status, and the heading estimation will be done when the cart is moving as straight line or even at stationary.
 
 Because there is only one UART on Jetson 40pins header, so we neeed to use USB port for the 2nd GPS. Please check on the wiring below.
 
@@ -303,118 +259,3 @@ The USB port of F9P GPS when plugging on Jetson would be recognized as `/dev/tty
 	./str2str -in ntrip://rtk2go.com:2101/InohanaKobo -out serial://ttyACM0:115200 -b 1
 
 	./str2str -in ntrip://rtk2go.com:2101/InohanaKobo -out serial://ttyACM1:115200 -b 1
-
-
-## JMOAB with DJI Ronin-SC control
-
-DJI Ronin-SC handheld camera stabilizer is DSLR camera gimbal. It could be remotely operated by RC transmitter with SBUS signal. For more detail how, please check on this [video](https://www.youtube.com/watch?v=fCnYqv7fR_c&ab_channel=Mad%27sTech). 
-
-In order to let the Jetson control the gimbal, we need to use a special JMOAB firmware (v07e_20210805_AT_JMOAB01&03_SBUSOUT.hex) which able to control ATCart wheels and also SBUS output on SBUS3 port. It could be found [here](./firmwares/)
-
-We need to use `jmoab-ros-atcart-gimbal.py` to control the cart and gimbal.
-
-There is still `/sbus_cmd` topic which going to receive sbus steering and throttle commands similar to normal `jmoab-ros-atcart.py`, and we have new topics as `/sbus_gimbal_cmd` which is the speed of pan and tilt of gimbal. For example, sending `[1680, 1024]` on this will make the gimbal panning in full speed, or `[1024, 1680]` will make the gimbal tilting in full speed. And there is `/gimbal_recenter` which is a boolean topic to recenter the gimbal back to home position. Send `True` to recenter the gimbal, and only needs one time (not continuous).
-
-
-To publish custome topics for debugging, please check on this [rqt_ez_publisher package](http://wiki.ros.org/rqt_ez_publisher).
-
-## JMOAB with Gazebo model and SITL
-
-To run JMOAB ROS as SITL (without the actual hardware), at least we should have a gamepad for a robot controller in order to change mode, steering/throttle, and some switches. I am using Logicool F310, and the axes and buttons are assinged as below
-
-![](images/joy.png)
-
-### Dependencies
-
-- Make sure you have `joy` package installed, `sudo apt-get install ros-$ROS_DISTRO-joy`.
-
-- You will need to make sure, that the Gazebo's URDF file has `libgazebo_ros_imu_sensor` and `libhector_gazebo_ros_gps` plugins, to have the `ublox/fix` and `imu` topics publishing. So this URDF file depends on which model are using, and it's not in this package.
-
-### Run
-
-	rosrun joy joy_node
-
-	rosrun jmoab-ros jmoab-ros-atcart-simulation.py
-
-Start atcart simulation node, this will start an `atcart` node simulation which going to pubish `atcart_mode` as current mode, and to subscribe `atcart_mode_cmd` to get command mode, and `sbus_cmd` for sbus values of steering and throttle. So we can have the same manner of topics similar to the real cart. The robot mode in gazebo is using `cmd_vel` topic for drive the wheel, so this node will publish the `cmd_vel` according to the input of `sbus_cmd` topic or `joy` node from user manual control.
-
-Once you change the mode by pressing X button on gamepad, the rover will be in manual mode, so you can drive it by throttle and steering analog stick as shown on image above. And once you pressed A button on gamepad, it will be in auto mode, and will listen on `sbus_cmd` topic for an autonomous drive program. B button is for hold mode, so it will stop moving. 
-
-	rosrun jmoab-ros jmoab-ros-compass-simulation.py
-
-Start a compass simulation node, this will be useful for outdoor GPS navigation, so you need to make sure there is `imu` topic publishing before. This node will publish `jmoab_compass` topic which is `[roll, pitch, heading]` std_msgs/Float32MultiArray the same as original `jmoab_compass` message. And also you can press Y button to do the `heading calibration` the same mannaer as `jmoab-compass.py` node as explained [at the end here](https://github.com/rasheeddo/jmoab-ros/blob/master/example/compass_calibration_step.md). Please make sure you have `ublox/fix` topic publishing.
-
-	rosrun jmoab-ros jmoab-ros-adc-simulation.py
-
-This is going to start a battery measurement simulation node, it's specified to use with 6S LiPo battery, so with fully charged it's 25.2V, and it could stay around 6 hours for a small cart. So first element of `/jmoab_adc` is a battery remaining voltage. We could try to simulate other Analog-To-Digital signal later on.
-
-
-Or for a better convenience, we could run all of required nodes in a launch file as a command below
-
-	roslaunch jmoab-ros jmoab-ros-simulation.launch
-
-## JMOAB with ZLAC8015D Driver
-
-The ZLAC8015D is dual brusless motor driver for 8 inch wheel. It could be used in both position and velocity control modes.
-
-In order to use `jmoab-ros-zlac8015d.py` node, we have to install [this python API](https://github.com/rasheeddo/ZLAC8015D_python_API). 
-
-Assuming that you cloned the above API to `/home/<Your-Username>/ZLAC8015D_python_API/` directory. You will need to link the `ZLAC8015D.py` class to `jmoab-ros/src` directory. Please run the command below, and replace `<Your-Username>` to correct username.
-
-	ln -s /home/<Your-Username>/ZLAC8015D_python_API/ZLAC8015D.py /home/<Your-Username>/catkin_ws/src/jmoab-ros/src/ZLAC8015D.py
-
-This will create the symlink of `ZLAC8015D.py` into `jmoab-ros/src`. So the `jmoab-ros-zlac8015d.py` can see the file.
-
-### Topics
-
-This node is publishing data as following
-
-- `/odom`, we get the data from wheel's encoder as RPM in velocity control and wheel's travelled in position control, those data are used to calculate the robot odometry data. You will need to change `self.L` according to your wheel's base width.
-
-- `/wheels_rpm`, the speed in RPM of each wheel as [left, right]
-
-- `/sbus_rc_ch` and `/atcart_mode`, similar to ATCart.
-
-This node is subscribing on,
-
-- `/sbus_cmd` and `/atcart_mode_cmd`, similar to ATCart.
-
-- `/zlac8015d/mode_cmd`, to change the ZLAC8015D mode, 1 for position control, 3 for velocity control
-
-- `/zlac8015d/pos/deg_cmd`, to send command as angle degree in position control, e.g. [90,70] 90deg of left wheel, 70deg of right wheel.
-
-- `/zlac8015d/pos/dist_cmd`, to send command as desired travelling distance, this would be correct if you are using 8 inch motors as default, e.g. [1.0, 1.0] for one meter travelling distance of each wheel.  
-
-Please check on [this video](https://youtu.be/3gUNfJ94oac) for a demonstration.
-
-### Odometry
-
-Raw odometry of ZLAC8015D is good enough in some application, but for an indoor navigation which the robot would move around the room, the `/odom` topic can suffer from tire's slip and other factor which could make the odometry data got offset.
-
-To get a better odometry, I would suggest to use [robot_pose_ekf](http://wiki.ros.org/robot_pose_ekf) to fuse IMU data with pure odometry. So please clone this package to your catkin workspace.
-
-I changed [this](https://github.com/ros-planning/robot_pose_ekf/blob/fd6cef32b447e8b344a1111373e515aa2f8bfc50/robot_pose_ekf.launch#L5) `base_footprint` to `base_link`, and disable [this](https://github.com/ros-planning/robot_pose_ekf/blob/fd6cef32b447e8b344a1111373e515aa2f8bfc50/robot_pose_ekf.launch#L10) `vo_used` to false.
-
-You can run the launch file below to start all necessary nodes,
-
-	roslaunch jmoab-ros jmoab-ros-ekf-odom-zlac8015d.launch
-
-This will start, 
-
-- `jmoab-ros-zlac8015d.py`, to get pure wheel's odometry
-
-- `jmoab-ros-imu.py`, to get jmoab_imu 
-
-- `ekf_odom_generate.py`, a helper script to convert `/robot_pose_ekf/odom_combined` which doesn't have TF to `/ekf_odom` which has a proper TF.
-
-- `robot_pose_ekf.launch`, ekf node to fuse data.
-
-- and some static transform publisher.
-
-Please check on [this video](https://youtu.be/XNgGo2GZ2M8) for a comparison of with/without `robot_pose_ekf`.
-
-## JMOAB with BME680 sensor
-
-...In development process
-
-
