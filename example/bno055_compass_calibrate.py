@@ -148,7 +148,7 @@ bus = SMBus(1)
 bus.write_byte_data(IMU_ADDR, OPR_MODE, CONF_MODE)
 time.sleep(0.1)
 
-config_axis_sign(YZ_REV)
+config_axis_sign(SIGN_DEFAULT)
 
 bus.write_byte_data(IMU_ADDR, OPR_MODE, NDOF_FMC_OFF)
 time.sleep(0.1)

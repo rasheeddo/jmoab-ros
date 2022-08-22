@@ -55,6 +55,8 @@ class ATCartSim(object):
 		self.ch2_sim = 1024
 		self.ch5_sim = 1024
 		self.ch7_sim = 1024
+		self.ch8_sim = 1024
+		self.ch9_sim = 1024
 
 		## Pub/Sub ##
 		cmd_vel_topic = self.namespace_attaching(NS, "/cmd_vel")
@@ -161,10 +163,28 @@ class ATCartSim(object):
 			self.mode_name = "MANUAL"
 			self.ch5_sim = 1024
 
-		if msg.buttons[5] == 1:
+		## back
+		if msg.buttons[7] == 1:
 			self.ch7_sim = 144
-		elif msg.buttons[4] == 1:
+		## Logicool
+		elif msg.buttons[8] == 1:
+			self.ch7_sim = 1024
+		## start
+		elif msg.buttons[6] == 1:
 			self.ch7_sim = 1904
+
+		## Y
+		if msg.buttons[3] == 1:
+			self.ch8_sim = 1904
+		else:
+			self.ch8_sim = 144
+
+		## RB
+		if msg.buttons[5] == 1:
+			self.ch9_sim = 1904
+		## LB
+		elif msg.buttons[4] == 1:
+			self.ch9_sim = 144
 
 		self.ch1_sim = int(self.map(msg.axes[3], -1.0, 1.0, 1680.0, 368.0))
 		self.ch2_sim = int(self.map(msg.axes[1], -1.0, 1.0, 368.0, 1680.0))
@@ -227,7 +247,7 @@ class ATCartSim(object):
 
 		while not rospy.is_shutdown():
 
-			self.sbus_rc_ch_sim_msg.data = [self.ch1_sim, self.ch2_sim, 1024, 1024, self.ch5_sim, 1024, self.ch7_sim, 1024]
+			self.sbus_rc_ch_sim_msg.data = [self.ch1_sim, self.ch2_sim, 1024, 1024, self.ch5_sim, 1024, self.ch7_sim, self.ch8_sim, self.ch9_sim]
 			self.sbus_rc_ch_sim_pub.publish(self.sbus_rc_ch_sim_msg)
 
 			self.atcart_mode = self.cart_mode

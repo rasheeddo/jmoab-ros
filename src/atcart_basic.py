@@ -54,8 +54,8 @@ class JMOAB_ATCart(object):
 		self.sbus_max_DB = self.sbus_mid + 1.0
 		self.sbus_min_DB = self.sbus_mid - 1.0
 
-		self.sbus_min_backward = 968	# a value before start rotating backward
-		self.sbus_min_forward = 1093	# a value before start rotating forward
+		self.sbus_min_backward = 975 #968	# a value before start rotating backward
+		self.sbus_min_forward = 1085 #1093	# a value before start rotating forward
 		self.prev_y = 0.0
 
 		### cmd_vel
@@ -83,8 +83,8 @@ class JMOAB_ATCart(object):
 		self.relay_cb_flag = False
 
 		### servo cmd
-		self.pwm_min = 1120
-		self.pwm_max = 1920
+		self.pwm_min = 820
+		self.pwm_max = 2220
 		self.pwm_mid = 1520
 		self.servo_list = []
 		self.servo_cb_flag = False
@@ -443,7 +443,10 @@ class JMOAB_ATCart(object):
 
 					if abs(self.vx) > 0.0 and abs(self.wz) > 0.0:
 						y_percent = self.map(self.vx, -self.vx_max, self.vx_max, -100.0, 100.0)
-						x_percent = self.map(self.wz, -self.wz_max, self.wz_max, y_percent, -y_percent)
+						if self.vx >= 0.0:
+							x_percent = self.map(self.wz, -self.wz_max, self.wz_max, y_percent, -y_percent)
+						else:
+							x_percent = self.map(self.wz, -self.wz_max, self.wz_max, -y_percent, y_percent)
 
 						# if abs(x_percent) > abs(y_percent):
 						# 	if x_percent > 0.0:
