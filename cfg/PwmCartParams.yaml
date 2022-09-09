@@ -1,0 +1,7 @@
+pwmcart_params:
+  sbus_left_max_db: 1128
+  sbus_right_max_db: 1128
+  sbus_left_min_db: 919
+  sbus_right_min_db: 919
+  show_log: True
+

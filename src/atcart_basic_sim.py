@@ -261,8 +261,16 @@ class ATCartSim(object):
 
 				## 1st priority is cmd_vel
 				if cmd_vel_period < 0.5:
-					x_percent = self.map(self.wz, -self.wz_max, self.wz_max, 100.0, -100.0)
-					y_percent = self.map(self.vx, -self.vx_max, self.vx_max, -100.0, 100.0)
+					if abs(self.vx) > 0.0 and abs(self.wz) > 0.0:
+						y_percent = self.map(self.vx, -self.vx_max, self.vx_max, -100.0, 100.0)
+						x_percent = self.map(self.wz, -self.wz_max, self.wz_max, y_percent, -y_percent)
+						# if self.vx >= 0.0:
+						# 	x_percent = self.map(self.wz, -self.wz_max, self.wz_max, y_percent, -y_percent)
+						# else:
+						# 	x_percent = self.map(self.wz, -self.wz_max, self.wz_max, y_percent, -y_percent)
+					else:
+						x_percent = self.map(self.wz, -self.wz_max, self.wz_max, 100.0, -100.0)
+						y_percent = self.map(self.vx, -self.vx_max, self.vx_max, -100.0, 100.0)
 
 					left_200_per, right_200_per = self.xy_mixing(x_percent, y_percent)
 
